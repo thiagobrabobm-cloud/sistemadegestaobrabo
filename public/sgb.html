@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA DE GESTÃO BRABO v4.0 - Aprimorado por Gemini</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+      // Configuração do Tailwind para um tema mais escuro e profissional
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              'brand-bg': '#1a202c',
+              'brand-surface': '#2d3748',
+              'brand-primary': '#48bb78',
+              'brand-secondary': '#4299e1',
+              'brand-danger': '#f56565',
+              'brand-text': '#e2e8f0',
+              'brand-subtle': '#a0aec0',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #2d3748; }
+        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #718096; }
+        
+        /* Animações e Estilos Adicionais */
+        .modal-fade-enter-active { transition: all 0.2s ease-out; }
+        .modal-fade-leave-active { transition: all 0.2s ease-in; }
+        .spinner { border: 2px solid #f3f3f3; border-top: 2px solid #48bb78; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .nav-btn { transition: all 0.2s ease-in-out; }
+        .nav-btn.active { background-color: #4299e1; color: white; }
+
+        /* Estilos para as notificações (Toast) */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+        .toast { display: flex; align-items: center; padding: 12px 16px; border-radius: 8px; margin-top: 10px; color: white; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease-in-out; transform: translateX(110%); opacity: 0; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast.success { background-color: #48bb78; }
+        .toast.error { background-color: #f56565; }
+    </style>
+</head>
+<body class="bg-brand-bg text-brand-text">
+
+    <div id="app" class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        <!-- Cabeçalho -->
+        <header class="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <div>
+                <h1 class="text-4xl sm:text-5xl font-extrabold text-white">SISTEMA DE GESTÃO BRABO</h1>
+                <div class="mt-2">
+                    <select id="unit-selector" class="bg-brand-surface border border-gray-600 text-white text-sm rounded-lg p-2 focus:ring-brand-primary focus:border-brand-primary"></select>
+                </div>
+            </div>
+            <button onclick="openLancamentoModal()" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Novo Lançamento</span>
+            </button>
+        </header>
+
+        <!-- Navegação por Abas -->
+        <div class="mb-6">
+            <nav class="flex flex-wrap gap-2" aria-label="Tabs">
+                <button onclick="changeTab('visaoGeral')" id="tab-visaoGeral" class="nav-btn active font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Visão Geral</button>
+                <button onclick="changeTab('alunos')" id="tab-alunos" class="nav-btn bg-brand-surface hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Alunos</button>
+                <button onclick="changeTab('planos')" id="tab-planos" class="nav-btn bg-brand-surface hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Planos</button>
+                <button onclick="changeTab('lancamentos')" id="tab-lancamentos" class="nav-btn bg-brand-surface hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Lançamentos</button>
+                <button onclick="changeTab('relatorios')" id="tab-relatorios" class="nav-btn bg-brand-surface hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Relatórios</button>
+            </nav>
+        </div>
+
+        <!-- Conteúdo das Abas -->
+        <main id="tabContent">
+            <!-- Conteúdo da Aba: Visão Geral -->
+            <div id="content-visaoGeral">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div id="kpi-receita" class="bg-brand-surface p-6 rounded-xl shadow-lg"></div>
+                    <div id="kpi-custo" class="bg-brand-surface p-6 rounded-xl shadow-lg"></div>
+                    <div id="kpi-saldo" class="bg-brand-surface p-6 rounded-xl shadow-lg"></div>
+                    <div id="kpi-alunos" class="bg-brand-surface p-6 rounded-xl shadow-lg"></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-brand-surface p-6 rounded-xl shadow-lg"><h3 class="text-xl font-bold text-white mb-4">Receita vs. Despesas (Mês Atual)</h3><canvas id="revenueChart"></canvas></div>
+                    <div class="space-y-6">
+                        <div class="bg-brand-surface p-6 rounded-xl shadow-lg"><h3 class="text-xl font-bold text-white mb-4">KPIs por Aluno</h3><div class="space-y-4"><div class="flex justify-between items-center"><span class="text-brand-subtle">Receita por Aluno:</span><span id="kpi-receita-aluno" class="font-bold text-white text-lg">R$ 0,00</span></div><div class="flex justify-between items-center"><span class="text-brand-subtle">Custo por Aluno:</span><span id="kpi-custo-aluno" class="font-bold text-white text-lg">R$ 0,00</span></div></div></div>
+                        <div class="bg-brand-surface p-6 rounded-xl shadow-lg"><h3 class="text-xl font-bold text-white mb-4">Top 5 Despesas do Mês</h3><canvas id="expensesChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conteúdo da Aba: Alunos -->
+            <div id="content-alunos" class="hidden">
+                <div class="bg-brand-surface p-6 rounded-xl shadow-lg">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                        <h3 class="text-xl font-bold text-white">Gestão de Alunos</h3>
+                        <div class="flex-grow sm:flex-grow-0 flex items-center gap-4 w-full sm:w-auto">
+                            <input type="text" id="search-alunos" onkeyup="renderAlunosTable()" placeholder="Buscar por nome..." class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2 focus:ring-brand-primary focus:border-brand-primary">
+                            <button onclick="openAlunoModal()" class="bg-brand-secondary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition duration-300 w-full sm:w-auto"><span>Novo Aluno</span></button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto mt-4">
+                        <table class="w-full text-left" id="tabela-alunos">
+                            <thead><tr class="border-b border-gray-600"><th class="p-3 w-16">Foto</th><th class="p-3">Nome</th><th class="p-3">Plano</th><th class="p-3">Email</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Ações</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conteúdo da Aba: Planos -->
+            <div id="content-planos" class="hidden">
+                 <div class="bg-brand-surface p-6 rounded-xl shadow-lg">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                        <h3 class="text-xl font-bold text-white">Gestão de Planos</h3>
+                        <div class="flex-grow sm:flex-grow-0 flex items-center gap-4 w-full sm:w-auto">
+                            <input type="text" id="search-planos" onkeyup="renderPlanosTable()" placeholder="Buscar por nome..." class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2 focus:ring-brand-primary focus:border-brand-primary">
+                            <button onclick="openPlanoModal()" class="bg-brand-secondary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition duration-300 w-full sm:w-auto"><span>Novo Plano</span></button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto mt-4">
+                        <table class="w-full text-left" id="tabela-planos">
+                            <thead><tr class="border-b border-gray-600"><th class="p-3">Nome do Plano</th><th class="p-3 text-right">Valor</th><th class="p-3 text-center">Duração</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Ações</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conteúdo da Aba: Lançamentos -->
+            <div id="content-lancamentos" class="hidden">
+                <div class="bg-brand-surface p-6 rounded-xl shadow-lg">
+                    <div class="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Todos os Lançamentos</h3>
+                            <div id="filter-container" class="flex items-center gap-2 mt-4 flex-wrap">
+                                <button onclick="filterLancamentos('todos')" id="filter-todos" class="filter-btn active bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Todos</button>
+                                <button onclick="filterLancamentos('receitas')" id="filter-receitas" class="filter-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Receitas</button>
+                                <button onclick="filterLancamentos('despesas')" id="filter-despesas" class="filter-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Despesas</button>
+                                <button onclick="filterLancamentos('pendentes')" id="filter-pendentes" class="filter-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Pendentes</button>
+                            </div>
+                        </div>
+                        <div class="w-full sm:w-auto">
+                             <input type="text" id="search-lancamentos" onkeyup="filterLancamentos()" placeholder="Buscar por descrição..." class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2 focus:ring-brand-primary focus:border-brand-primary mb-2">
+                             <button id="analiseBtn" onclick="analisarDespesas()" class="w-full bg-brand-secondary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300">
+                                 <span id="analiseBtnText">✨ Analisar Despesas com IA</span>
+                                 <div id="analiseSpinner" class="spinner hidden"></div>
+                             </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left" id="tabela-lancamentos">
+                            <thead><tr class="border-b border-gray-600"><th class="p-3">Descrição</th><th class="p-3">Categoria</th><th class="p-3 text-right">Valor</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Vencimento</th><th class="p-3 text-center">Anexo</th><th class="p-3 text-center">Ações</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conteúdo da Aba: Relatórios -->
+            <div id="content-relatorios" class="hidden">
+                 <div class="bg-brand-surface p-6 rounded-xl shadow-lg">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                        <h3 class="text-xl font-bold text-white">Relatório por Período</h3>
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <div><label for="report-start-date" class="text-sm text-brand-subtle">Início:</label><input type="date" id="report-start-date" class="bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+                            <div><label for="report-end-date" class="text-sm text-brand-subtle">Fim:</label><input type="date" id="report-end-date" class="bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+                            <button onclick="imprimirRelatorio()" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg self-end">Imprimir</button>
+                        </div>
+                    </div>
+                    <div id="report-preview" class="bg-gray-800 text-brand-text p-8 rounded mt-4"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modais (formulários) -->
+    <div id="lancamentoModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden"><div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-lg m-4 p-6 sm:p-8 transform transition-all max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-6 flex-shrink-0"><h2 id="lancamentoModalTitle" class="text-2xl font-bold text-white">Novo Lançamento</h2><button onclick="closeModal('lancamentoModal')" class="text-brand-subtle hover:text-white text-3xl">&times;</button></div><form id="lancamentoForm" class="space-y-4 overflow-y-auto pr-2">
+        <input type="hidden" id="lancamentoId">
+        <div><label for="tipo" class="block text-sm font-medium text-brand-subtle">Tipo</label><select id="tipo" name="tipo" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"><option value="DESPESA">Despesa</option><option value="RECEITA">Receita</option></select></div>
+        <div><label for="descricao" class="block text-sm font-medium text-brand-subtle">Descrição</label><input type="text" id="descricao" name="descricao" placeholder="Ex: Conta de luz - Ref 10/2025" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+        <div class="flex items-end gap-2"><div class="flex-grow"><label for="categoria" class="block text-sm font-medium text-brand-subtle">Categoria</label><select id="categoria" name="categoria" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2">
+            <option data-type="DESPESA">1. Aluguel</option><option data-type="DESPESA">2. IPTU</option><option data-type="DESPESA">3. Energia elétrica</option><option data-type="DESPESA">4. Água</option><option data-type="DESPESA">5. Telefone</option><option data-type="DESPESA">6. Internet</option><option data-type="DESPESA">7. TV</option><option data-type="DESPESA">8. Folha de pagamento (Funcionários)</option><option data-type="DESPESA">9. 13º Salário (Funcionários)</option><option data-type="DESPESA">10. Férias (Funcionários)</option><option data-type="DESPESA">11. Rescisão de contrato (Funcionários)</option><option data-type="DESPESA">12. Cancelamento de matrícula (Alunos)</option><option data-type="DESPESA">13. Obrigações trabalhistas (FGTS/INSS)</option><option data-type="DESPESA">14. Simples Nacional (DAS)</option><option data-type="DESPESA">15. Outros impostos</option><option data-type="DESPESA">16. Contabilidade (LS Consult)</option><option data-type="DESPESA">17. Exames admissionais/demissionais</option><option data-type="DESPESA">18. Tarifas bancárias</option><option data-type="DESPESA">19. Rádio academia</option><option data-type="DESPESA">20. Mensalidade sistema (Cloud Gym)</option><option data-type="DESPESA">21. Investimentos (Máquinas e equipamentos)</option><option data-type="DESPESA">22. Manutenção/Melhorias</option><option data-type="DESPESA">23. André (Técnico de informática)</option><option data-type="DESPESA">24. Adm das redes sociais/site/marketing</option><option data-type="DESPESA">25. Eventos da academia</option><option data-type="DESPESA">26. Papelaria</option><option data-type="DESPESA">27. Despesa com veículos</option><option data-type="DESPESA">28. Avaliação (Parte dos professores)</option><option data-type="DESPESA">29. Produtos para venda</option><option data-type="DESPESA">30. Seguro academia</option><option data-type="DESPESA">31. Despesas de cartão</option><option data-type="DESPESA">Taxas de parceiros</option><option data-type="DESPESA">32. Outros</option>
+            <option data-type="RECEITA">Mensalidades</option><option data-type="RECEITA">Venda de produtos</option><option data-type="RECEITA">Avaliação física</option><option data-type="RECEITA">Parceiros (Gympass/Wellhub, etc.)</option>
+        </select></div><button type="button" id="suggestBtn" onclick="sugerirCategoria()" class="h-10 bg-brand-secondary hover:bg-blue-600 text-white font-bold px-3 rounded-lg flex items-center justify-center space-x-2 transition duration-300 relative"><span id="suggestBtnText">✨</span><div id="suggestSpinner" class="spinner hidden"></div></button></div><div><label for="valor" class="block text-sm font-medium text-brand-subtle">Valor</label><div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-3 text-brand-subtle">R$</span><input type="number" id="valor" name="valor" placeholder="0.00" step="0.01" required class="pl-10 mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label for="vencimento" class="block text-sm font-medium text-brand-subtle">Data de Vencimento</label><input type="date" id="vencimento" name="vencimento" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div><div><label for="pagamento" class="block text-sm font-medium text-brand-subtle">Data de Pagamento (Opcional)</label><input type="date" id="pagamento" name="pagamento" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div></div>
+        <!-- CAMPO DE ANEXO -->
+        <div><label for="anexo" class="block text-sm font-medium text-brand-subtle">Anexar Comprovante (Opcional)</label><input type="file" id="anexo" name="anexo" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-secondary file:text-white hover:file:bg-blue-600"></div><div id="anexo-preview" class="text-sm text-brand-subtle"></div>
+        <div class="flex justify-end space-x-4 pt-4 flex-shrink-0"><button type="button" onclick="closeModal('lancamentoModal')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">Cancelar</button><button type="submit" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg">Salvar</button></div></form></div></div>
+    <div id="analysisModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden"><div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-2xl m-4 p-6 sm:p-8 transform transition-all max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-4 flex-shrink-0"><h2 class="text-2xl font-bold text-white">✨ Análise Inteligente de Despesas</h2><button onclick="closeModal('analysisModal')" class="text-brand-subtle hover:text-white text-3xl">&times;</button></div><div id="analysisResult" class="text-brand-text space-y-4 overflow-y-auto pr-2"></div></div></div>
+    
+    <!-- Modal de Alunos com Foto e Anexos -->
+    <div id="alunoModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden"><div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-3xl m-4 p-6 sm:p-8 transform transition-all max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-6 flex-shrink-0"><h2 id="alunoModalTitle" class="text-2xl font-bold text-white">Cadastrar Novo Aluno</h2><button onclick="closeModal('alunoModal')" class="text-brand-subtle hover:text-white text-3xl">&times;</button></div><form id="alunoForm" class="space-y-4 overflow-y-auto pr-2">
+        <input type="hidden" id="alunoId">
+        
+        <!-- Seção da Foto -->
+        <div class="flex items-center space-x-6 pb-4 border-b border-gray-700">
+            <img id="foto_preview" src="https://placehold.co/96x96/2d3748/e2e8f0?text=Foto" class="w-24 h-24 rounded-full object-cover bg-gray-600 flex-shrink-0">
+            <div class="flex-grow">
+                <label for="foto" class="block text-sm font-medium text-brand-subtle mb-1">Foto do Aluno (PNG, JPG)</label>
+                <input type="file" id="foto" accept="image/png, image/jpeg" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-secondary file:text-white hover:file:bg-blue-600 cursor-pointer">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label for="nome_completo" class="block text-sm font-medium text-brand-subtle">Nome Completo</label><input type="text" id="nome_completo" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+            <div><label for="email" class="block text-sm font-medium text-brand-subtle">Email</label><input type="email" id="email" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+            <div><label for="telefone" class="block text-sm font-medium text-brand-subtle">Telefone</label><input type="tel" id="telefone" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+            <div><label for="cpf" class="block text-sm font-medium text-brand-subtle">CPF</label><input type="text" id="cpf" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+            <div><label for="data_nascimento" class="block text-sm font-medium text-brand-subtle">Data de Nascimento</label><input type="date" id="data_nascimento" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+            <div><label for="id_plano_atual" class="block text-sm font-medium text-brand-subtle">Plano</label><select id="id_plano_atual" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></select></div>
+        </div>
+        <fieldset class="border border-gray-600 p-4 rounded-lg"><legend class="px-2 text-brand-subtle">Endereço</legend><div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-1"><label for="cep" class="block text-sm font-medium text-brand-subtle">CEP</label><input type="text" id="cep" onblur="buscarCep(this.value)" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+            <div class="md:col-span-2"><label for="logradouro" class="block text-sm font-medium text-brand-subtle">Logradouro</label><input type="text" id="logradouro" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+            <div><label for="numero" class="block text-sm font-medium text-brand-subtle">Número</label><input type="text" id="numero" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+            <div><label for="bairro" class="block text-sm font-medium text-brand-subtle">Bairro</label><input type="text" id="bairro" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+            <div><label for="cidade" class="block text-sm font-medium text-brand-subtle">Cidade</label><input type="text" id="cidade" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+        </div></fieldset>
+
+        <!-- Seção de Anexos do Aluno -->
+        <fieldset class="border border-gray-600 p-4 rounded-lg"><legend class="px-2 text-brand-subtle">Anexos do Aluno</legend>
+            <div id="anexos-list" class="space-y-2 mb-4"></div>
+            <label for="anexos_aluno" class="block text-sm font-medium text-brand-subtle">Adicionar novos anexos (Ex: Atestado Médico)</label>
+            <input type="file" id="anexos_aluno" multiple class="mt-1 w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-secondary file:text-white hover:file:bg-blue-600 cursor-pointer">
+        </fieldset>
+
+        <div class="flex justify-end space-x-4 pt-4 flex-shrink-0"><button type="button" onclick="closeModal('alunoModal')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">Cancelar</button><button type="submit" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg">Salvar</button></div>
+    </form></div></div>
+
+    <div id="planoModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden"><div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-lg m-4 p-6 sm:p-8 transform transition-all max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-6 flex-shrink-0"><h2 id="planoModalTitle" class="text-2xl font-bold text-white">Criar Novo Plano</h2><button onclick="closeModal('planoModal')" class="text-brand-subtle hover:text-white text-3xl">&times;</button></div><form id="planoForm" class="space-y-4 overflow-y-auto pr-2">
+        <input type="hidden" id="planoId">
+        <div><label for="nome_plano" class="block text-sm font-medium text-brand-subtle">Nome</label><input type="text" id="nome_plano" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+        <div><label for="descricao_plano" class="block text-sm font-medium text-brand-subtle">Descrição</label><textarea id="descricao_plano" rows="3" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></textarea></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label for="valor_plano" class="block text-sm font-medium text-brand-subtle">Valor (R$)</label><input type="number" id="valor_plano" step="0.01" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+            <div><label for="duracao_meses" class="block text-sm font-medium text-brand-subtle">Duração (meses)</label><input type="number" id="duracao_meses" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+        </div>
+        <div><label for="status_plano" class="block text-sm font-medium text-brand-subtle">Status</label><select id="status_plano" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"><option value="Ativo">Ativo</option><option value="Inativo">Inativo</option></select></div>
+        <div class="flex justify-end space-x-4 pt-4 flex-shrink-0"><button type="button" onclick="closeModal('planoModal')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">Cancelar</button><button type="submit" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg">Salvar</button></div>
+    </form></div></div>
+    
+    <!-- Modal de Confirmação Genérico -->
+    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden">
+        <div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-sm m-4 p-6 text-center">
+            <h3 id="confirmModalTitle" class="text-xl font-bold text-white mb-4">Confirmar Ação</h3>
+            <p id="confirmModalText" class="text-brand-subtle mb-6">Você tem certeza?</p>
+            <div class="flex justify-center space-x-4">
+                <button id="confirmModalCancel" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">Cancelar</button>
+                <button id="confirmModalOk" class="bg-brand-danger hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Container para Notificações (Toasts) -->
+    <div id="toast-container"></div>
+
+    <script>
+        // --- BANCO DE DADOS EM MEMÓRIA E ESTADO GLOBAL ---
+        let database = {};
+        let revenueChart, expensesChart;
+        let currentLancamentoFilter = 'todos';
+        const units = ['Academia Zanco - Cordovil', 'Academia Zanco - Irajá 1', 'Academia Zanco - Irajá 2', 'Academia Zanco - Vila da Penha', 'Academia Zanco - Brás de Pina', 'Academia Zanco - Caxias'];
+        let selectedUnit = units[0];
+        const placeholderFoto = "https://placehold.co/96x96/2d3748/e2e8f0?text=Foto";
+
+        // --- PERSISTÊNCIA DE DADOS (LOCAL STORAGE) ---
+        function saveData() {
+            try {
+                localStorage.setItem('academiaDB_v4', JSON.stringify(database));
+                console.log("Dados salvos no Local Storage.");
+            } catch (e) {
+                console.error("Erro ao salvar dados:", e);
+                showToast("Erro ao salvar os dados. O armazenamento pode estar cheio.", 'error');
+            }
+        }
+
+        function loadData() {
+            const savedData = localStorage.getItem('academiaDB_v4');
+            if (savedData) {
+                database = JSON.parse(savedData);
+                console.log("Dados carregados do Local Storage.");
+            } else {
+                loadInitialData(); // Carrega dados mock se não houver nada salvo
+            }
+        }
+        
+        // --- FUNÇÕES DE ACESSO AOS DADOS DA UNIDADE ATUAL ---
+        const getCurrentUnitData = () => database[selectedUnit];
+
+        // --- FUNÇÕES DE FORMATAÇÃO E UTILIDADES ---
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        const formatDate = (dateString) => dateString ? new Date(dateString + 'T03:00:00').toLocaleDateString('pt-BR') : '--';
+        const formatDateTime = (dateObj) => new Date(dateObj).toLocaleString('pt-BR');
+        const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve({ name: file.name, data: reader.result });
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+
+        // --- RENDERIZAÇÃO GERAL ---
+        function renderAll() {
+            renderLancamentosTable();
+            renderAlunosTable();
+            renderPlanosTable();
+            updateDashboard();
+            renderReport();
+        }
+
+        // --- GESTÃO DE PLANOS ---
+        function renderPlanosTable() {
+            const tableBody = document.querySelector("#tabela-planos tbody");
+            const searchTerm = document.getElementById('search-planos').value.toLowerCase();
+            const planos = getCurrentUnitData().planos.filter(p => p.nome_plano.toLowerCase().includes(searchTerm));
+            
+            tableBody.innerHTML = '';
+            if (!planos || planos.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-brand-subtle">Nenhum plano encontrado.</td></tr>`;
+                return;
+            }
+            planos.forEach(plano => {
+                const statusClass = plano.status_plano === 'Ativo' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400';
+                tableBody.innerHTML += `<tr class="border-b border-gray-700 hover:bg-gray-700/50"><td class="p-3 font-medium text-white">${plano.nome_plano}</td><td class="p-3 text-right text-brand-subtle">${formatCurrency(plano.valor)}</td><td class="p-3 text-center text-brand-subtle">${plano.duracao_meses} meses</td><td class="p-3 text-center"><span class="${statusClass} text-xs font-bold px-2 py-1 rounded-full">${plano.status_plano}</span></td><td class="p-3 text-center space-x-4"><button onclick="openPlanoModal(${plano.id_plano})" class="text-blue-400 hover:text-blue-300">Editar</button><button onclick="deletePlano(${plano.id_plano})" class="text-red-400 hover:text-red-300">Excluir</button></td></tr>`;
+            });
+        }
+        function openPlanoModal(id = null) {
+            const form = document.getElementById('planoForm');
+            form.reset();
+            document.getElementById('planoModalTitle').textContent = id ? 'Editar Plano' : 'Criar Novo Plano';
+            if (id) {
+                const plano = getCurrentUnitData().planos.find(p => p.id_plano === id);
+                document.getElementById('planoId').value = plano.id_plano;
+                document.getElementById('nome_plano').value = plano.nome_plano;
+                document.getElementById('descricao_plano').value = plano.descricao;
+                document.getElementById('valor_plano').value = plano.valor;
+                document.getElementById('duracao_meses').value = plano.duracao_meses;
+                document.getElementById('status_plano').value = plano.status_plano;
+            } else {
+                document.getElementById('planoId').value = '';
+            }
+            openModal('planoModal');
+        }
+        document.getElementById('planoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('planoId').value;
+            const planoData = {nome_plano: document.getElementById('nome_plano').value, descricao: document.getElementById('descricao_plano').value, valor: parseFloat(document.getElementById('valor_plano').value), duracao_meses: parseInt(document.getElementById('duracao_meses').value), status_plano: document.getElementById('status_plano').value};
+            const planos = getCurrentUnitData().planos;
+            if (id) {
+                const index = planos.findIndex(p => p.id_plano == id);
+                planos[index] = { ...planos[index], ...planoData };
+            } else {
+                planoData.id_plano = planos.length > 0 ? Math.max(...planos.map(p => p.id_plano)) + 1 : 1;
+                planos.push(planoData);
+            }
+            saveData();
+            renderPlanosTable();
+            closeModal('planoModal');
+            showToast('Plano salvo com sucesso!');
+        });
+        function deletePlano(id) {
+            const alunos = getCurrentUnitData().alunos;
+            const planoEmUso = alunos.some(aluno => aluno.id_plano_atual === id);
+
+            if (planoEmUso) {
+                showToast('Não é possível excluir. Plano em uso por um ou mais alunos.', 'error');
+                return;
+            }
+
+            showConfirmModal('Excluir Plano', 'Tem certeza que deseja excluir este plano? Esta ação não pode ser desfeita.', () => {
+                let planos = getCurrentUnitData().planos;
+                database[selectedUnit].planos = planos.filter(p => p.id_plano !== id);
+                saveData();
+                renderAll();
+                showToast('Plano excluído com sucesso!', 'error');
+            });
+        }
+
+        // --- GESTÃO DE ALUNOS ---
+        function renderAlunosTable() {
+            const tableBody = document.querySelector("#tabela-alunos tbody");
+            const searchTerm = document.getElementById('search-alunos').value.toLowerCase();
+            const unitData = getCurrentUnitData();
+            const alunos = unitData.alunos.filter(a => a.nome_completo.toLowerCase().includes(searchTerm));
+            
+            tableBody.innerHTML = '';
+            if (!alunos || alunos.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-brand-subtle">Nenhum aluno encontrado.</td></tr>`;
+                return;
+            }
+            alunos.forEach(aluno => {
+                const plano = unitData.planos.find(p => p.id_plano === aluno.id_plano_atual) || { nome_plano: 'N/A' };
+                const statusClass = aluno.status_aluno === 'Ativo' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400';
+                const fotoHtml = `<img src="${aluno.foto || placeholderFoto}" class="w-10 h-10 rounded-full object-cover bg-gray-700">`;
+                tableBody.innerHTML += `<tr class="border-b border-gray-700 hover:bg-gray-700/50"><td class="p-3">${fotoHtml}</td><td class="p-3 font-medium text-white">${aluno.nome_completo}</td><td class="p-3 text-brand-subtle">${plano.nome_plano}</td><td class="p-3 text-brand-subtle">${aluno.email}</td><td class="p-3 text-center"><span class="${statusClass} text-xs font-bold px-2 py-1 rounded-full">${aluno.status_aluno}</span></td><td class="p-3 text-center space-x-4"><button onclick="openAlunoModal(${aluno.id_aluno})" class="text-blue-400 hover:text-blue-300">Editar</button><button onclick="deleteAluno(${aluno.id_aluno})" class="text-red-400 hover:text-red-300">Excluir</button></td></tr>`;
+            });
+        }
+        function populatePlanosDropdown() {
+            const select = document.getElementById('id_plano_atual');
+            select.innerHTML = '<option value="">Selecione um plano</option>';
+            getCurrentUnitData().planos.filter(p => p.status_plano === 'Ativo').forEach(plano => {
+                select.innerHTML += `<option value="${plano.id_plano}">${plano.nome_plano} - ${formatCurrency(plano.valor)}</option>`;
+            });
+        }
+        function openAlunoModal(id = null) {
+            const form = document.getElementById('alunoForm');
+            form.reset();
+            populatePlanosDropdown();
+            document.getElementById('foto_preview').src = placeholderFoto;
+            document.getElementById('anexos-list').innerHTML = '';
+            document.getElementById('alunoModalTitle').textContent = id ? 'Editar Aluno' : 'Cadastrar Novo Aluno';
+            
+            if (id) {
+                const aluno = getCurrentUnitData().alunos.find(a => a.id_aluno === id);
+                Object.keys(aluno).forEach(key => {
+                    const el = document.getElementById(key);
+                    if(el) el.value = aluno[key];
+                });
+                if (aluno.foto) {
+                    document.getElementById('foto_preview').src = aluno.foto;
+                }
+                renderAnexosList(id);
+            } else {
+                document.getElementById('alunoId').value = '';
+            }
+            openModal('alunoModal');
+        }
+        document.getElementById('foto').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('foto_preview').src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+        async function handleAlunoFormSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('alunoId').value;
+            const alunos = getCurrentUnitData().alunos;
+            let alunoExistente = id ? alunos.find(a => a.id_aluno == id) : {};
+
+            const alunoData = {
+                nome_completo: document.getElementById('nome_completo').value, email: document.getElementById('email').value, telefone: document.getElementById('telefone').value, cpf: document.getElementById('cpf').value, data_nascimento: document.getElementById('data_nascimento').value, id_plano_atual: parseInt(document.getElementById('id_plano_atual').value), status_aluno: 'Ativo', cep: document.getElementById('cep').value, logradouro: document.getElementById('logradouro').value, numero: document.getElementById('numero').value, bairro: document.getElementById('bairro').value, cidade: document.getElementById('cidade').value,
+                foto: alunoExistente.foto || null,
+                anexos: alunoExistente.anexos || []
+            };
+
+            // Processar foto
+            const fotoFile = document.getElementById('foto').files[0];
+            if (fotoFile) {
+                const fotoResult = await readFileAsDataURL(fotoFile);
+                alunoData.foto = fotoResult.data;
+            }
+
+            // Processar novos anexos
+            const anexoFiles = document.getElementById('anexos_aluno').files;
+            if (anexoFiles.length > 0) {
+                const anexoPromises = Array.from(anexoFiles).map(readFileAsDataURL);
+                const novosAnexos = await Promise.all(anexoPromises);
+                alunoData.anexos.push(...novosAnexos);
+            }
+
+            if (id) {
+                const index = alunos.findIndex(a => a.id_aluno == id);
+                alunos[index] = { ...alunos[index], ...alunoData };
+            } else {
+                alunoData.id_aluno = alunos.length > 0 ? Math.max(...alunos.map(a => a.id_aluno)) + 1 : 1;
+                alunos.push(alunoData);
+            }
+            
+            saveData();
+            renderAlunosTable();
+            updateDashboard();
+            closeModal('alunoModal');
+            showToast('Aluno salvo com sucesso!');
+        }
+        document.getElementById('alunoForm').addEventListener('submit', handleAlunoFormSubmit);
+        function renderAnexosList(alunoId) {
+            const aluno = getCurrentUnitData().alunos.find(a => a.id_aluno === alunoId);
+            const listContainer = document.getElementById('anexos-list');
+            listContainer.innerHTML = '';
+            if (aluno && aluno.anexos && aluno.anexos.length > 0) {
+                aluno.anexos.forEach((anexo, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between bg-gray-700 p-2 rounded';
+                    item.innerHTML = `
+                        <a href="${anexo.data}" target="_blank" class="text-sm text-brand-secondary hover:underline truncate pr-2">${anexo.name}</a>
+                        <button type="button" onclick="handleRemoverAnexo(${alunoId}, ${index})" class="text-red-400 hover:text-red-300 text-xs font-bold">REMOVER</button>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            } else {
+                listContainer.innerHTML = '<p class="text-sm text-brand-subtle">Nenhum anexo encontrado.</p>';
+            }
+        }
+        function handleRemoverAnexo(alunoId, anexoIndex) {
+            showConfirmModal('Remover Anexo', 'Tem certeza que deseja remover este anexo?', () => {
+                const aluno = getCurrentUnitData().alunos.find(a => a.id_aluno === alunoId);
+                aluno.anexos.splice(anexoIndex, 1);
+                // Não salva aqui, espera o 'Salvar' principal do formulário
+                renderAnexosList(alunoId);
+                showToast('Anexo removido da lista. Salve o aluno para confirmar.', 'error');
+            });
+        }
+        function deleteAluno(id) {
+            showConfirmModal('Excluir Aluno', 'Tem certeza que deseja excluir este aluno? Esta ação não pode ser desfeita.', () => {
+                let alunos = getCurrentUnitData().alunos;
+                database[selectedUnit].alunos = alunos.filter(a => a.id_aluno !== id);
+                saveData();
+                renderAll();
+                showToast('Aluno excluído com sucesso!', 'error');
+            });
+        }
+        
+        // --- API VIA CEP ---
+        async function buscarCep(cep) {
+            const cleanCep = cep.replace(/\D/g, '');
+            if (cleanCep.length !== 8) return;
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+                if (!response.ok) throw new Error('CEP não encontrado');
+                const data = await response.json();
+                if (data.erro) {
+                   showToast('CEP não encontrado.', 'error');
+                } else {
+                    document.getElementById('logradouro').value = data.logradouro;
+                    document.getElementById('bairro').value = data.bairro;
+                    document.getElementById('cidade').value = data.localidade;
+                    showToast('Endereço preenchido!');
+                }
+            } catch (error) {
+                console.error("Erro ao buscar CEP:", error);
+                showToast('Erro ao buscar CEP.', 'error');
+            }
+        }
+
+        // --- GESTÃO DE LANÇAMENTOS (COM ANEXO) ---
+        function filterLancamentos(filterType) {
+            if (filterType) {
+                currentLancamentoFilter = filterType;
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`filter-${filterType}`).classList.add('active');
+            }
+            renderLancamentosTable();
+        }
+        function renderLancamentosTable() {
+            const tableBody = document.querySelector("#tabela-lancamentos tbody");
+            const searchTerm = document.getElementById('search-lancamentos').value.toLowerCase();
+            let dataToRender = getCurrentUnitData().lancamentos;
+
+            if (currentLancamentoFilter === 'receitas') dataToRender = dataToRender.filter(l => l.tipo === 'RECEITA');
+            else if (currentLancamentoFilter === 'despesas') dataToRender = dataToRender.filter(l => l.tipo === 'DESPESA');
+            else if (currentLancamentoFilter === 'pendentes') dataToRender = dataToRender.filter(l => !l.dataPagamento);
+            if (searchTerm) dataToRender = dataToRender.filter(l => l.descricao.toLowerCase().includes(searchTerm));
+            
+            tableBody.innerHTML = '';
+            if (dataToRender.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-brand-subtle">Nenhum lançamento encontrado.</td></tr>`;
+                return;
+            }
+            dataToRender.slice().sort((a,b) => new Date(b.dataVencimento) - new Date(a.dataVencimento)).forEach(lanc => {
+                const isDespesa = lanc.tipo === 'DESPESA';
+                const statusClass = lanc.dataPagamento ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400';
+                const statusText = lanc.dataPagamento ? (isDespesa ? 'Pago' : 'Recebido') : 'Pendente';
+                const valorClass = isDespesa ? 'text-brand-danger' : 'text-brand-primary';
+                const sinal = isDespesa ? '-' : '+';
+                const anexoIcon = lanc.anexo ? `<a href="${lanc.anexo.data}" target="_blank" title="${lanc.anexo.name}" class="inline-block text-brand-secondary hover:text-blue-300"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></a>` : '<span>--</span>';
+
+                tableBody.innerHTML += `<tr class="border-b border-gray-700 hover:bg-gray-700/50"><td class="p-3 text-white font-medium">${lanc.descricao}</td><td class="p-3 text-brand-subtle">${lanc.categoria}</td><td class="p-3 ${valorClass} font-bold text-right">${sinal} ${formatCurrency(lanc.valor)}</td><td class="p-3 text-center"><span class="${statusClass} text-xs font-bold px-2 py-1 rounded-full">${statusText}</span></td><td class="p-3 text-center text-brand-subtle">${formatDate(lanc.dataVencimento)}</td><td class="p-3 text-center">${anexoIcon}</td><td class="p-3 text-center space-x-4"><button onclick="openLancamentoModal(${lanc.id})" class="text-blue-400 hover:text-blue-300">Editar</button><button onclick="deleteLancamento(${lanc.id})" class="text-red-400 hover:text-red-300">Excluir</button></td></tr>`;
+            });
+        }
+        function openLancamentoModal(id = null) {
+            const form = document.getElementById('lancamentoForm');
+            form.reset();
+            document.getElementById('anexo-preview').textContent = '';
+            document.getElementById('lancamentoModalTitle').textContent = id ? 'Editar Lançamento' : 'Novo Lançamento';
+
+            if (id) {
+                const lancamento = getCurrentUnitData().lancamentos.find(l => l.id === id);
+                document.getElementById('lancamentoId').value = lancamento.id;
+                document.getElementById('tipo').value = lancamento.tipo;
+                document.getElementById('descricao').value = lancamento.descricao;
+                document.getElementById('categoria').value = lancamento.categoria;
+                document.getElementById('valor').value = lancamento.valor;
+                document.getElementById('vencimento').value = lancamento.dataVencimento;
+                document.getElementById('pagamento').value = lancamento.dataPagamento;
+                if (lancamento.anexo) {
+                     document.getElementById('anexo-preview').innerHTML = `Anexo existente: <a href="${lancamento.anexo.data}" target="_blank" class="text-brand-secondary underline">${lancamento.anexo.name}</a>. Selecione um novo para substituir.`;
+                }
+            } else {
+                 document.getElementById('lancamentoId').value = '';
+            }
+            toggleCategoryOptions();
+            openModal('lancamentoModal');
+        }
+        function deleteLancamento(id) {
+            showConfirmModal('Excluir Lançamento', 'Tem certeza que deseja excluir este lançamento?', () => {
+                let lancamentos = getCurrentUnitData().lancamentos;
+                database[selectedUnit].lancamentos = lancamentos.filter(l => l.id !== id);
+                saveData();
+                renderAll();
+                showToast('Lançamento excluído com sucesso!', 'error');
+            });
+        }
+        document.getElementById('lancamentoForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const valorInput = document.getElementById('valor').value;
+            if (!valorInput || isNaN(parseFloat(valorInput)) || parseFloat(valorInput) <= 0) {
+                showToast("Por favor, insira um valor válido e maior que zero.", 'error');
+                return;
+            }
+            
+            const file = document.getElementById('anexo').files[0];
+            let anexoData = null;
+            if (file) {
+                anexoData = await readFileAsDataURL(file);
+            }
+
+            const id = document.getElementById('lancamentoId').value;
+            const lancamentos = getCurrentUnitData().lancamentos;
+            const lancamentoData = {
+                tipo: document.getElementById('tipo').value,
+                descricao: document.getElementById('descricao').value,
+                categoria: document.getElementById('categoria').value,
+                valor: parseFloat(valorInput),
+                dataPagamento: document.getElementById('pagamento').value || null,
+                dataVencimento: document.getElementById('vencimento').value,
+            };
+            
+            if (id) { // Editando
+                const index = lancamentos.findIndex(l => l.id == id);
+                lancamentos[index] = { ...lancamentos[index], ...lancamentoData };
+                if(anexoData) lancamentos[index].anexo = anexoData;
+            } else { // Criando
+                lancamentoData.id = lancamentos.length > 0 ? Math.max(...lancamentos.map(l => l.id)) + 1 : 1;
+                lancamentoData.dataCriacao = new Date();
+                lancamentoData.anexo = anexoData;
+                lancamentos.push(lancamentoData);
+            }
+            
+            saveData();
+            renderAll();
+            closeModal('lancamentoModal');
+            this.reset();
+            toggleCategoryOptions();
+            showToast('Lançamento salvo com sucesso!');
+        });
+
+        // --- DASHBOARD E GRÁFICOS ---
+        function updateDashboard() {
+            const unitData = getCurrentUnitData();
+            if (!unitData) return;
+            const receitaTotal = unitData.lancamentos.filter(l => l.tipo === 'RECEITA').reduce((acc, l) => acc + l.valor, 0);
+            const custoTotal = unitData.lancamentos.filter(l => l.tipo === 'DESPESA').reduce((acc, l) => acc + l.valor, 0);
+            const saldo = receitaTotal - custoTotal;
+            const totalAlunosAtivos = unitData.alunos.filter(a => a.status_aluno === 'Ativo').length;
+
+            document.getElementById('kpi-receita').innerHTML = `<div class="flex justify-between items-start"><h3 class="text-lg font-semibold text-brand-subtle">Receita Bruta</h3><div class="p-2 bg-green-500/20 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 text-brand-primary"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div></div><p class="text-3xl font-bold text-white mt-2">${formatCurrency(receitaTotal)}</p>`;
+            document.getElementById('kpi-custo').innerHTML = `<div class="flex justify-between items-start"><h3 class="text-lg font-semibold text-brand-subtle">Custo Total</h3><div class="p-2 bg-red-500/20 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 text-brand-danger"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div></div><p class="text-3xl font-bold text-white mt-2">${formatCurrency(custoTotal)}</p>`;
+            document.getElementById('kpi-saldo').innerHTML = `<div class="flex justify-between items-start"><h3 class="text-lg font-semibold text-brand-subtle">Saldo</h3><div class="p-2 bg-blue-500/20 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 text-brand-secondary"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></div></div><p class="text-3xl font-bold text-white mt-2">${formatCurrency(saldo)}</p>`;
+            document.getElementById('kpi-alunos').innerHTML = `<div class="flex justify-between items-start"><h3 class="text-lg font-semibold text-brand-subtle">Alunos Ativos</h3><div class="p-2 bg-yellow-500/20 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 text-yellow-400"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div></div><p class="text-3xl font-bold text-white mt-2">${totalAlunosAtivos}</p>`;
+            document.getElementById('kpi-receita-aluno').textContent = formatCurrency(totalAlunosAtivos > 0 ? receitaTotal / totalAlunosAtivos : 0);
+            document.getElementById('kpi-custo-aluno').textContent = formatCurrency(totalAlunosAtivos > 0 ? custoTotal / totalAlunosAtivos : 0);
+            updateCharts(receitaTotal, custoTotal);
+        }
+        function updateCharts(receitaTotal, custoTotal) {
+            if (!revenueChart || !expensesChart) return;
+            revenueChart.data.datasets[0].data = [receitaTotal];
+            revenueChart.data.datasets[1].data = [custoTotal];
+            revenueChart.update();
+            const despesasAgrupadas = getCurrentUnitData().lancamentos.filter(l => l.tipo === 'DESPESA').reduce((acc, l) => { acc[l.categoria] = (acc[l.categoria] || 0) + l.valor; return acc; }, {});
+            const top5 = Object.entries(despesasAgrupadas).sort(([,a],[,b]) => b-a).slice(0, 5);
+            expensesChart.data.labels = top5.map(item => (item[0].split('. ')[1] || item[0]).substring(0, 15));
+            expensesChart.data.datasets[0].data = top5.map(item => item[1]);
+            expensesChart.update();
+        }
+
+        // --- INICIALIZAÇÃO E EVENTOS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Gráficos
+            revenueChart = new Chart(document.getElementById('revenueChart').getContext('2d'), { type: 'bar', data: { labels: ['Mês Atual'], datasets: [{ label: 'Receita', data: [], backgroundColor: 'rgba(72, 187, 120, 0.6)' }, { label: 'Despesas', data: [], backgroundColor: 'rgba(245, 101, 101, 0.6)' }] }, options: { scales: { y: { beginAtZero: true, ticks: { color: '#a0aec0' }, grid: { color: 'rgba(160, 174, 192, 0.2)' } }, x: { ticks: { color: '#a0aec0' }, grid: { color: 'rgba(160, 174, 192, 0.2)' } } }, plugins: { legend: { labels: { color: '#e2e8f0' } } } } });
+            expensesChart = new Chart(document.getElementById('expensesChart').getContext('2d'), { type: 'doughnut', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#4299e1', '#48bb78', '#f56565', '#ed8936', '#ecc94b'], hoverOffset: 4 }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+            
+            document.getElementById('tipo').addEventListener('change', toggleCategoryOptions);
+            toggleCategoryOptions();
+
+            populateUnitSelector();
+            document.getElementById('unit-selector').addEventListener('change', (e) => {
+                selectedUnit = e.target.value;
+                renderAll();
+            });
+
+            setDefaultDates();
+            document.getElementById('report-start-date').addEventListener('change', renderReport);
+            document.getElementById('report-end-date').addEventListener('change', renderReport);
+            
+            loadData(); // Carrega dados do Local Storage ou inicia com Mock
+            renderAll();
+        });
+
+        // --- MODAIS, ABAS E NOTIFICAÇÕES ---
+        function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
+        function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
+        ['lancamentoModal', 'analysisModal', 'alunoModal', 'planoModal', 'confirmModal'].forEach(id => {
+            const modal = document.getElementById(id);
+            if(modal) modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal(id)
+            });
+        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ['lancamentoModal', 'analysisModal', 'alunoModal', 'planoModal', 'confirmModal'].forEach(closeModal); });
+        
+        function showConfirmModal(title, text, onConfirm) {
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalText').textContent = text;
+            const confirmBtn = document.getElementById('confirmModalOk');
+            const cancelBtn = document.getElementById('confirmModalCancel');
+            
+            // Clone and replace the button to remove old event listeners
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+            newConfirmBtn.onclick = () => {
+                onConfirm();
+                closeModal('confirmModal');
+            };
+            cancelBtn.onclick = () => closeModal('confirmModal');
+            openModal('confirmModal');
+        }
+
+        function changeTab(activeTab) {
+            ['visaoGeral', 'alunos', 'planos', 'lancamentos', 'relatorios'].forEach(tabId => {
+                const content = document.getElementById(`content-${tabId}`);
+                const tab = document.getElementById(`tab-${tabId}`);
+                const isActive = tabId === activeTab;
+                content.classList.toggle('hidden', !isActive);
+                tab.classList.toggle('active', isActive);
+                tab.classList.toggle('bg-brand-surface', !isActive);
+                tab.classList.toggle('hover:bg-gray-600', !isActive);
+            });
+        }
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.add('show'); }, 10);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => { toast.remove(); }, 300); }, 3000);
+        }
+
+        // --- LÓGICA INTELIGENTE DO FORMULÁRIO ---
+        function toggleCategoryOptions() {
+            const tipo = document.getElementById('tipo').value;
+            const categoriasSelect = document.getElementById('categoria');
+            const suggestBtn = document.getElementById('suggestBtn');
+            let firstVisible = true;
+            for (const option of categoriasSelect.options) {
+                const isVisible = (option.dataset.type === tipo);
+                option.style.display = isVisible ? '' : 'none';
+                if (isVisible && firstVisible) {
+                    categoriasSelect.value = option.value;
+                    firstVisible = false;
+                }
+            }
+            suggestBtn.style.display = (tipo === 'DESPESA') ? 'flex' : 'none';
+        }
+
+        // --- UNIDADES E RELATÓRIOS ---
+        function populateUnitSelector() {
+            const selector = document.getElementById('unit-selector');
+            units.forEach(unit => selector.innerHTML += `<option value="${unit}">${unit}</option>`);
+            selector.value = selectedUnit;
+        }
+        function setDefaultDates() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+            document.getElementById('report-start-date').value = firstDay;
+            document.getElementById('report-end-date').value = lastDay;
+        }
+        function getReportHtml() {
+            const startDate = document.getElementById('report-start-date').value;
+            const endDate = document.getElementById('report-end-date').value;
+            const selectedUnitName = document.getElementById('unit-selector').value;
+            const unitData = getCurrentUnitData();
+            const filteredData = unitData.lancamentos.filter(l => l.dataVencimento >= startDate && l.dataVencimento <= endDate);
+            const activeStudents = unitData.alunos.filter(a => a.status_aluno === 'Ativo').length;
+            const receita = filteredData.filter(l => l.tipo === 'RECEITA').reduce((acc, l) => acc + l.valor, 0);
+            const despesas = filteredData.filter(l => l.tipo === 'DESPESA');
+            const custo = despesas.reduce((acc, l) => acc + l.valor, 0);
+            const saldo = receita - custo;
+            let despesasHtml = despesas.map(d => `<tr class="border-b border-gray-600"><td class="py-2 px-4">${d.categoria}</td><td class="py-2 px-4 text-right">${formatCurrency(d.valor)}</td></tr>`).join('');
+            
+            return `<h2 class="text-2xl font-bold mb-2">Relatório Financeiro</h2><p class="text-lg text-brand-subtle mb-4">${selectedUnitName}</p><p class="mb-2"><strong>Período:</strong> ${formatDate(startDate)} a ${formatDate(endDate)}</p><p class="mb-2"><strong>Alunos Ativos:</strong> ${activeStudents}</p><hr class="my-4 border-gray-600"><div class="grid grid-cols-2 gap-4 mb-4"><div><strong>Receita Bruta:</strong></div><div class="text-right font-bold text-green-400">${formatCurrency(receita)}</div><div><strong>Custo Total:</strong></div><div class="text-right font-bold text-red-400">${formatCurrency(custo)}</div><div class="border-t border-gray-600 pt-2"><strong>Saldo:</strong></div><div class="border-t border-gray-600 pt-2 text-right font-bold">${formatCurrency(saldo)}</div></div><h3 class="text-xl font-bold mt-6 mb-2">Detalhamento de Despesas</h3><table class="w-full text-left"><thead><tr class="border-b-2 border-gray-600"><th class="py-2 px-4">Categoria</th><th class="py-2 px-4 text-right">Valor</th></tr></thead><tbody>${despesasHtml || '<tr><td colspan="2" class="py-2 px-4 text-brand-subtle">Nenhuma despesa no período.</td></tr>'}</tbody></table>`;
+        }
+        function renderReport() {
+            document.getElementById('report-preview').innerHTML = getReportHtml();
+        }
+        function imprimirRelatorio() {
+            const reportHtmlForPrint = getReportHtml().replace(/class="[^"]*"/g, ''); // Remove classes for better printing
+            const printWindow = window.open('', '', 'height=800,width=800');
+            printWindow.document.write('<html><head><title>Relatório</title>');
+            printWindow.document.write('<style>body{font-family:sans-serif;color:black;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;}hr{border-top:1px solid #ccc;}h2,h3,p,div{color:black !important;}</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(reportHtmlForPrint);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+        }
+
+        // --- API GEMINI ---
+        const apiKey = ""; // Se você tiver uma chave da API do Google AI Studio, insira aqui.
+        async function callGemini(prompt, retries = 3, delay = 1000) {
+            if (!apiKey) {
+                return "<h3>Recurso Indisponível</h3><p>A chave da API Gemini não foi configurada. Insira a chave na variável 'apiKey' no código para usar esta funcionalidade.</p>";
+            }
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                if (!response.ok) { if (response.status === 429 && retries > 0) { await new Promise(resolve => setTimeout(resolve, delay)); return callGemini(prompt, retries - 1, delay * 2); } throw new Error(`Erro na API: ${response.statusText}`); }
+                const data = await response.json(); return data.candidates[0].content.parts[0].text;
+            } catch (error) { if (retries > 0) { await new Promise(resolve => setTimeout(resolve, delay)); return callGemini(prompt, retries - 1, delay * 2); } console.error("Erro ao chamar a API Gemini:", error); return "<h3>Erro de Conexão</h3><p>Não foi possível obter uma resposta da IA. Verifique sua conexão ou tente novamente.</p>"; }
+        }
+        async function analisarDespesas() {
+             const analiseBtn = document.getElementById('analiseBtn'); const btnText = document.getElementById('analiseBtnText'); const spinner = document.getElementById('analiseSpinner'); const analysisResult = document.getElementById('analysisResult');
+             btnText.classList.add('hidden'); spinner.classList.remove('hidden'); analiseBtn.disabled = true;
+             analysisResult.innerHTML = '<div class="flex justify-center items-center"><div class="spinner"></div><p class="ml-4">Analisando despesas...</p></div>'; openModal('analysisModal');
+             
+             const despesas = getCurrentUnitData().lancamentos.filter(l => l.tipo === 'DESPESA');
+             if (despesas.length === 0) {
+                analysisResult.innerHTML = "<h3>Sem Dados</h3><p>Não há despesas para analisar. Adicione alguns lançamentos primeiro.</p>";
+             } else {
+                let dadosDespesas = "Descrição;Categoria;Valor\n" + despesas.map(l => `${l.descricao};${l.categoria};${l.valor}`).join("\n");
+                const prompt = `Você é um consultor financeiro especialista em academias. Analise os seguintes dados de despesas de uma academia no Brasil. Forneça uma análise em bullet points (usando *) com insights acionáveis. Seu objetivo é: 1. Identificar as maiores áreas de gastos. 2. Sugerir pontos específicos onde pode haver oportunidade de economia. 3. Apontar qualquer despesa que pareça incomum. 4. Use um tom profissional, mas direto. Formate a resposta em HTML, usando <h3> para títulos e <ul> com <li> para os bullet points. Dados: ${dadosDespesas}`;
+                const resultado = await callGemini(prompt); 
+                analysisResult.innerHTML = resultado;
+             }
+
+             btnText.classList.remove('hidden'); spinner.classList.add('hidden'); analiseBtn.disabled = false;
+        }
+        async function sugerirCategoria() {
+            const suggestBtn = document.getElementById('suggestBtn'); const btnText = document.getElementById('suggestBtnText'); const spinner = document.getElementById('suggestSpinner');
+            const descricao = document.getElementById('descricao').value; if (descricao.length < 5) { showToast("Digite uma descrição mais detalhada.", 'error'); return; }
+            btnText.classList.add('hidden'); spinner.classList.remove('hidden'); suggestBtn.disabled = true;
+            
+            const selectCategoria = document.getElementById('categoria'); 
+            const categorias = Array.from(selectCategoria.options).filter(opt => opt.style.display !== 'none').map(opt => opt.text);
+            const prompt = `Com base na descrição de despesa a seguir, qual das seguintes categorias é a mais provável? Responda APENAS com o nome exato da categoria da lista, sem nenhuma palavra ou pontuação adicional. Descrição: "${descricao}" Categorias Disponíveis: ${categorias.join('\n')}`;
+            const categoriaSugerida = await callGemini(prompt);
+            
+            if (categoriaSugerida.includes("Recurso Indisponível") || categoriaSugerida.includes("Erro de Conexão")) {
+                showToast("IA indisponível. Verifique a chave da API.", "error");
+            } else {
+                const option = Array.from(selectCategoria.options).find(opt => opt.text.trim() === categoriaSugerida.trim()); 
+                if (option) { 
+                    selectCategoria.value = option.value; 
+                    showToast("Categoria sugerida pela IA!");
+                } else { 
+                    console.warn("IA sugeriu categoria não encontrada:", categoriaSugerida); 
+                    showToast("IA sugeriu uma categoria inválida.", "error");
+                }
+            }
+            btnText.classList.remove('hidden'); spinner.classList.add('hidden'); suggestBtn.disabled = false;
+        }
+
+        // --- DADOS INICIAIS (MOCK DATA) ---
+        function loadInitialData() {
+            units.forEach((unit) => {
+                const defaultPlans = [
+                    { id_plano: 1, nome_plano: 'Plano Mensal', descricao: 'Acesso completo por 30 dias.', valor: 119.90, duracao_meses: 1, status_plano: 'Ativo' },
+                    { id_plano: 2, nome_plano: 'Plano Trimestral', descricao: 'Acesso por 90 dias com desconto.', valor: 329.90, duracao_meses: 3, status_plano: 'Ativo' },
+                    { id_plano: 3, nome_plano: 'Plano Anual', descricao: 'O melhor custo-benefício.', valor: 1199.90, duracao_meses: 12, status_plano: 'Ativo' },
+                ];
+                database[unit] = {
+                    planos: JSON.parse(JSON.stringify(defaultPlans)),
+                    alunos: [],
+                    lancamentos: []
+                };
+            });
+            console.log("Banco de dados inicializado com dados mock.");
+            showToast("Bem-vindo! Dados de exemplo foram carregados.");
+        }
+    </script>
+</body>
+</html>

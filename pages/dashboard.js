@@ -1,35 +1,16 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]";
-import { signOut } from "next-auth/react";
-import Image from "next/image";
 
-export default function Dashboard({ user }) {
-  return (
-    <div style={{ textAlign: "center", marginTop: 40 }}>
-      <h1>Dashboard</h1>
-      <p>Bem-vindo, {user.name} ({user.email})</p>
-
-      {user.image && (
-        <Image
-          src={user.image}
-          alt="Avatar"
-          width={120}
-          height={120}
-          style={{ borderRadius: "50%" }}
-        />
-      )}
-
-      <div style={{ marginTop: 16 }}>
-        <button onClick={() => signOut()}>Sair</button>
-      </div>
-    </div>
-  );
+export default function Dashboard() {
+  // Essa página não renderiza nada
+  return null;
 }
 
 export async function getServerSideProps(ctx) {
   const session = await getServerSession(ctx.req, ctx.res, authOptions);
 
   if (!session) {
+    // Se não estiver logado, manda pro login do Google
     return {
       redirect: {
         destination: `/api/auth/signin?callbackUrl=${encodeURIComponent("/dashboard")}`,
@@ -38,5 +19,11 @@ export async function getServerSideProps(ctx) {
     };
   }
 
-  return { props: { user: session.user } };
+  // Se estiver logado, manda direto para o sistema
+  return {
+    redirect: {
+      destination: "/sgb.html",
+      permanent: false,
+    },
+  };
 }
