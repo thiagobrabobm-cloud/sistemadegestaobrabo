@@ -1,28 +1,38 @@
+// pages/api/auth/[...nextauth].js
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
 export const authOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+  // use NEXTAUTH_SECRET (ou AUTH_SECRET como fallback se você realmente usa isso)
+  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
   session: { strategy: "jwt" },
-  debug: true, // mostra logs úteis
+  debug: true, // deixe true só enquanto estiver testando
+
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
   ],
+
   callbacks: {
     async signIn({ user }) {
-      // só estes 2 e-mails podem entrar
-      const allowed = new Set([
-        "thiagobrabobm@gmail.com",
-        "marlucezanco02@gmail.com"
-      ]);
+      // Lê e-mails permitidos do .env: ALLOWED_EMAILS=um@a.com, outro@b.com
+      const allowed = new Set(
+        (process.env.ALLOWED_EMAILS || "")
+          .split(",")
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean)
+      );
+
+      // Se a lista estiver vazia, por segurança NÃO deixa entrar
+      if (allowed.size === 0) return false;
+
       const email = (user?.email || "").toLowerCase().trim();
       return allowed.has(email);
     },
   },
 };
 
-// exporta para o NextAuth
+// 👉 ESSA LINHA NÃO PODE FALTAR
 export default NextAuth(authOptions);

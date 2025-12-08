@@ -1,1339 +1,809 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA DE GESTÃO BRABO v4.6 - Aprimorado por Gemini</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Chart.js para os gráficos -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <script>
-      // Configuração do Tailwind para um tema mais escuro e profissional
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-            colors: {
-              'brand-bg': '#1a202c',
-              'brand-surface': '#2d3748',
-              'brand-primary': '#48bb78',
-              'brand-secondary': '#4299e1',
-              'brand-danger': '#f56565',
-              'brand-text': '#e2e8f0',
-              'brand-subtle': '#a0aec0',
-            }
-          }
-        }
-      }
-    </script>
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #2d3748; }
-        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #718096; }
-        
-        .spinner { border: 2px solid #f3f3f3; border-top: 2px solid #48bb78; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .nav-btn { transition: all 0.2s ease-in-out; }
-        .nav-btn.active { background-color: #4299e1; color: white; }
+  <meta charset="UTF-8" />
+  <title>SISTEMA DE GESTÃO BRABO v5.0</title>
 
-        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
-        .toast { display: flex; align-items: center; padding: 12px 16px; border-radius: 8px; margin-top: 10px; color: white; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease-in-out; transform: translateX(110%); opacity: 0; }
-        .toast.show { transform: translateX(0); opacity: 1; }
-        .toast.success { background-color: #48bb78; }
-        .toast.error { background-color: #f56565; }
-    </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js para gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      background-color: #1a202c;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .tab-active {
+      background-color: #4299e1;
+      color: white;
+    }
+    .tab-inactive {
+      background-color: #2d3748;
+      color: #e2e8f0;
+    }
+    .tab-inactive:hover {
+      background-color: #4a5568;
+    }
+  </style>
 </head>
-<body class="bg-brand-bg text-brand-text">
+<body class="min-h-screen">
 
-    <div id="app" class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        <!-- Cabeçalho -->
-        <header class="flex flex-wrap justify-between items-center gap-4 mb-8">
-            <div>
-                <h1 class="text-4xl sm:text-5xl font-extrabold text-white">SISTEMA DE GESTÃO BRABO</h1>
-                <div class="mt-2">
-                    <select id="unit-selector" class="bg-brand-surface border border-gray-600 text-white text-sm rounded-lg p-2 focus:ring-brand-primary focus:border-brand-primary"></select>
-                </div>
-            </div>
-            <button onclick="openLancamentoModal()" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition duration-300">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                <span>Novo Lançamento</span>
-            </button>
-        </header>
-
-        <!-- Navegação por Abas -->
-        <div class="mb-6">
-            <nav class="flex flex-wrap gap-2" aria-label="Tabs">
-                <button onclick="changeTab('visaoGeral')" id="tab-visaoGeral" class="nav-btn active font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Visão Geral</button>
-                <button onclick="changeTab('alunos')" id="tab-alunos" class="nav-btn bg-brand-surface hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Alunos</button>
-                <button onclick="changeTab('funcionarios')" id="tab-funcionarios" class="nav-btn bg-brand-surface hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Funcionários</button>
-                <button onclick="changeTab('planos')" id="tab-planos" class="nav-btn bg-brand-surface hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Planos</button>
-                <button onclick="changeTab('lancamentos')" id="tab-lancamentos" class="nav-btn bg-brand-surface hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Lançamentos</button>
-                <button onclick="changeTab('relatorios')" id="tab-relatorios" class="nav-btn bg-brand-surface hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg text-sm sm:text-base">Relatórios</button>
-            </nav>
-        </div>
-
-        <!-- Conteúdo das Abas -->
-        <main id="tabContent">
-            <!-- Conteúdo da Aba: Visão Geral -->
-            <div id="content-visaoGeral">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div id="kpi-receita" class="bg-brand-surface p-6 rounded-xl shadow-lg"></div>
-                    <div id="kpi-custo" class="bg-brand-surface p-6 rounded-xl shadow-lg"></div>
-                    <div id="kpi-saldo" class="bg-brand-surface p-6 rounded-xl shadow-lg"></div>
-                    <div id="kpi-alunos" class="bg-brand-surface p-6 rounded-xl shadow-lg"></div>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 bg-brand-surface p-6 rounded-xl shadow-lg"><h3 class="text-xl font-bold text-white mb-4">Receita vs. Despesas (Mês Atual)</h3><canvas id="revenueChart"></canvas></div>
-                    <div class="space-y-6">
-                        <div class="bg-brand-surface p-6 rounded-xl shadow-lg"><h3 class="text-xl font-bold text-white mb-4">KPIs por Aluno</h3><div class="space-y-4"><div class="flex justify-between items-center"><span class="text-brand-subtle">Receita por Aluno:</span><span id="kpi-receita-aluno" class="font-bold text-white text-lg">R$ 0,00</span></div><div class="flex justify-between items-center"><span class="text-brand-subtle">Custo por Aluno:</span><span id="kpi-custo-aluno" class="font-bold text-white text-lg">R$ 0,00</span></div></div></div>
-                        <div class="bg-brand-surface p-6 rounded-xl shadow-lg"><h3 class="text-xl font-bold text-white mb-4">Top 5 Despesas do Mês</h3><canvas id="expensesChart"></canvas></div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Conteúdo da Aba: Alunos -->
-            <div id="content-alunos" class="hidden">
-                <div class="bg-brand-surface p-6 rounded-xl shadow-lg">
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                        <h3 class="text-xl font-bold text-white">Gestão de Alunos</h3>
-                        <div class="flex-grow sm:flex-grow-0 flex items-center gap-4 w-full sm:w-auto">
-                            <input type="text" id="search-alunos" onkeyup="renderAlunosTable()" placeholder="Buscar por nome..." class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2 focus:ring-brand-primary focus:border-brand-primary">
-                            <button onclick="imprimirListaAlunos()" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition duration-300 w-full sm:w-auto">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                                <span>Imprimir Lista</span>
-                            </button>
-                            <button onclick="openAlunoModal()" class="bg-brand-secondary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition duration-300 w-full sm:w-auto"><span>Novo Aluno</span></button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto mt-4">
-                        <table class="w-full text-left" id="tabela-alunos">
-                            <thead><tr class="border-b border-gray-600"><th class="p-3 w-16">Foto</th><th class="p-3">Nome</th><th class="p-3">Plano</th><th class="p-3">Email</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Ações</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Conteúdo da Aba: Funcionários -->
-            <div id="content-funcionarios" class="hidden">
-                <div class="bg-brand-surface p-6 rounded-xl shadow-lg">
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                        <h3 class="text-xl font-bold text-white">Gestão de Funcionários</h3>
-                        <div class="flex-grow sm:flex-grow-0 flex items-center gap-4 w-full sm:w-auto">
-                            <input type="text" id="search-funcionarios" onkeyup="renderFuncionariosTable()" placeholder="Buscar por nome..." class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2 focus:ring-brand-primary focus:border-brand-primary">
-                             <button onclick="imprimirListaFuncionarios()" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition duration-300 w-full sm:w-auto">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                                <span>Imprimir Lista</span>
-                            </button>
-                            <button onclick="openFuncionarioModal()" class="bg-brand-secondary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition duration-300 w-full sm:w-auto"><span>Novo Funcionário</span></button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto mt-4">
-                        <table class="w-full text-left" id="tabela-funcionarios">
-                            <thead><tr class="border-b border-gray-600"><th class="p-3 w-16">Foto</th><th class="p-3">Nome</th><th class="p-3">Cargo</th><th class="p-3">Telefone</th><th class="p-3 text-right">Salário Base</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Ações</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Conteúdo da Aba: Planos -->
-            <div id="content-planos" class="hidden">
-                 <div class="bg-brand-surface p-6 rounded-xl shadow-lg">
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                        <h3 class="text-xl font-bold text-white">Gestão de Planos</h3>
-                        <div class="flex-grow sm:flex-grow-0 flex items-center gap-4 w-full sm:w-auto">
-                            <input type="text" id="search-planos" onkeyup="renderPlanosTable()" placeholder="Buscar por nome..." class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2 focus:ring-brand-primary focus:border-brand-primary">
-                            <button onclick="openPlanoModal()" class="bg-brand-secondary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition duration-300 w-full sm:w-auto"><span>Novo Plano</span></button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto mt-4">
-                        <table class="w-full text-left" id="tabela-planos">
-                            <thead><tr class="border-b border-gray-600"><th class="p-3">Nome do Plano</th><th class="p-3 text-right">Valor</th><th class="p-3 text-center">Duração</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Ações</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Conteúdo da Aba: Lançamentos -->
-            <div id="content-lancamentos" class="hidden">
-                <div class="bg-brand-surface p-6 rounded-xl shadow-lg">
-                    <div class="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
-                        <div>
-                            <h3 class="text-xl font-bold text-white">Todos os Lançamentos</h3>
-                            <div id="filter-container" class="flex items-center gap-2 mt-4 flex-wrap">
-                                <button onclick="filterLancamentos('todos')" id="filter-todos" class="filter-btn active bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Todos</button>
-                                <button onclick="filterLancamentos('receitas')" id="filter-receitas" class="filter-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Receitas</button>
-                                <button onclick="filterLancamentos('despesas')" id="filter-despesas" class="filter-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Despesas</button>
-                                <button onclick="filterLancamentos('pendentes')" id="filter-pendentes" class="filter-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Pendentes</button>
-                            </div>
-                        </div>
-                        <div class="w-full sm:w-auto">
-                             <input type="text" id="search-lancamentos" onkeyup="filterLancamentos()" placeholder="Buscar por descrição..." class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2 focus:ring-brand-primary focus:border-brand-primary mb-2">
-                             <button id="analiseBtn" onclick="analisarDespesas()" class="w-full bg-brand-secondary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300">
-                                 <span id="analiseBtnText">✨ Analisar Despesas com IA</span>
-                                 <div id="analiseSpinner" class="spinner hidden"></div>
-                             </button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left" id="tabela-lancamentos">
-                            <thead><tr class="border-b border-gray-600"><th class="p-3">Descrição</th><th class="p-3">Categoria</th><th class="p-3 text-right">Valor</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Vencimento</th><th class="p-3 text-center">Anexo</th><th class="p-3 text-center">Ações</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Conteúdo da Aba: Relatórios -->
-            <div id="content-relatorios" class="hidden">
-                 <div class="bg-brand-surface p-6 rounded-xl shadow-lg mb-6">
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                        <h3 class="text-xl font-bold text-white">Relatório Financeiro por Período</h3>
-                        <div class="flex items-center gap-4 flex-wrap">
-                            <div><label for="report-start-date" class="text-sm text-brand-subtle">Início:</label><input type="date" id="report-start-date" class="bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-                            <div><label for="report-end-date" class="text-sm text-brand-subtle">Fim:</label><input type="date" id="report-end-date" class="bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-                            <button onclick="imprimirRelatorio()" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg self-end">Imprimir</button>
-                        </div>
-                    </div>
-                    <div id="report-preview" class="bg-gray-800 text-brand-text p-8 rounded mt-4"></div>
-                </div>
-                <div class="bg-brand-surface p-6 rounded-xl shadow-lg">
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                        <h3 class="text-xl font-bold text-white">Relatório de Alunos Ativos por Período</h3>
-                        <div class="flex items-center gap-4 flex-wrap">
-                            <div><label for="student-report-start-date" class="text-sm text-brand-subtle">Início:</label><input type="date" id="student-report-start-date" class="bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-                            <div><label for="student-report-end-date" class="text-sm text-brand-subtle">Fim:</label><input type="date" id="student-report-end-date" class="bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-                            <button onclick="imprimirRelatorioAlunosAtivos()" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg self-end">Gerar e Imprimir</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
+  <!-- TELA DE LOGIN / BLOQUEIO -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-[#2d3748] p-8 rounded-2xl max-w-md w-full shadow-xl text-center">
+      <h1 class="text-2xl font-bold mb-4">SISTEMA DE GESTÃO BRABO v5.0</h1>
+      <p class="text-sm text-gray-300 mb-6">
+        Faça login com sua conta do Google autorizada para acessar o sistema.
+      </p>
+      <button
+        id="btn-login"
+        class="w-full bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-3 rounded-lg mb-3"
+      >
+        Entrar com Google
+      </button>
+      <p id="login-error" class="text-sm text-red-300 mt-2 hidden"></p>
     </div>
+  </div>
 
-    <!-- Modais (formulários) -->
-    <div id="lancamentoModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden"><div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-lg m-4 p-6 sm:p-8 transform transition-all max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-6 flex-shrink-0"><h2 id="lancamentoModalTitle" class="text-2xl font-bold text-white">Novo Lançamento</h2><button onclick="closeModal('lancamentoModal')" class="text-brand-subtle hover:text-white text-3xl">&times;</button></div><form id="lancamentoForm" class="space-y-4 overflow-y-auto pr-2">
-        <input type="hidden" id="lancamentoId">
-        <div><label for="tipo" class="block text-sm font-medium text-brand-subtle">Tipo</label><select id="tipo" name="tipo" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"><option value="DESPESA">Despesa</option><option value="RECEITA">Receita</option></select></div>
-        <div id="aluno-selector-container" class="hidden">
-            <label for="id_aluno_lancamento" class="block text-sm font-medium text-brand-subtle">Aluno</label>
-            <select id="id_aluno_lancamento" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></select>
+  <!-- APP PRINCIPAL -->
+  <div id="app" class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto hidden">
+    <!-- Cabeçalho -->
+    <header class="flex flex-wrap justify-between items-center gap-4 mb-6">
+      <div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-white">
+          SISTEMA DE GESTÃO BRABO v5.0
+        </h1>
+        <div class="mt-2 flex items-center gap-3">
+          <label class="text-sm text-gray-300">Unidade:</label>
+          <select
+            id="unit-selector"
+            class="bg-[#2d3748] border border-gray-600 text-white text-sm rounded-lg p-2"
+          ></select>
         </div>
-        <div id="funcionario-selector-container" class="hidden">
-            <label for="id_funcionario_lancamento" class="block text-sm font-medium text-brand-subtle">Funcionário</label>
-            <select id="id_funcionario_lancamento" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></select>
-        </div>
-        <div><label for="descricao" class="block text-sm font-medium text-brand-subtle">Descrição</label><input type="text" id="descricao" name="descricao" placeholder="Ex: Conta de luz - Ref 10/2025" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-        <div class="flex items-end gap-2"><div class="flex-grow"><label for="categoria" class="block text-sm font-medium text-brand-subtle">Categoria</label><select id="categoria" name="categoria" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2">
-            <option data-type="DESPESA">1. Aluguel</option><option data-type="DESPESA">2. IPTU</option><option data-type="DESPESA">3. Energia elétrica</option><option data-type="DESPESA">4. Água</option><option data-type="DESPESA">5. Telefone</option><option data-type="DESPESA">6. Internet</option><option data-type="DESPESA">7. TV</option><option data-type="DESPESA" data-employee="true">8. Folha de pagamento (Funcionários)</option><option data-type="DESPESA" data-employee="true">9. 13º Salário (Funcionários)</option><option data-type="DESPESA" data-employee="true">10. Férias (Funcionários)</option><option data-type="DESPESA">11. Rescisão de contrato (Funcionários)</option><option data-type="DESPESA">12. Cancelamento de matrícula (Alunos)</option><option data-type="DESPESA">13. Obrigações trabalhistas (FGTS/INSS)</option><option data-type="DESPESA">14. Simples Nacional (DAS)</option><option data-type="DESPESA">15. Outros impostos</option><option data-type="DESPESA">16. Contabilidade (LS Consult)</option><option data-type="DESPESA">17. Exames admissionais/demissionais</option><option data-type="DESPESA">18. Tarifas bancárias</option><option data-type="DESPESA">19. Rádio academia</option><option data-type="DESPESA">20. Mensalidade sistema (Cloud Gym)</option><option data-type="DESPESA">21. Investimentos (Máquinas e equipamentos)</option><option data-type="DESPESA">22. Manutenção/Melhorias</option><option data-type="DESPESA">23. André (Técnico de informática)</option><option data-type="DESPESA">24. Adm das redes sociais/site/marketing</option><option data-type="DESPESA">25. Eventos da academia</option><option data-type="DESPESA">26. Papelaria</option><option data-type="DESPESA">27. Despesa com veículos</option><option data-type="DESPESA">28. Avaliação (Parte dos professores)</option><option data-type="DESPESA">29. Produtos para venda</option><option data-type="DESPESA">30. Seguro academia</option><option data-type="DESPESA">31. Despesas de cartão</option><option data-type="DESPESA">Taxas de parceiros</option><option data-type="DESPESA">32. Outros</option>
-            <option data-type="RECEITA" data-student="true">Mensalidades</option><option data-type="RECEITA">Venda de produtos</option><option data-type="RECEITA">Avaliação física</option><option data-type="RECEITA">Parceiros (Gympass/Wellhub, etc.)</option>
-        </select></div><button type="button" id="suggestBtn" onclick="sugerirCategoria()" class="h-10 bg-brand-secondary hover:bg-blue-600 text-white font-bold px-3 rounded-lg flex items-center justify-center space-x-2 transition duration-300 relative"><span id="suggestBtnText">✨</span><div id="suggestSpinner" class="spinner hidden"></div></button></div><div><label for="valor" class="block text-sm font-medium text-brand-subtle">Valor</label><div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-3 text-brand-subtle">R$</span><input type="number" id="valor" name="valor" placeholder="0.00" step="0.01" required class="pl-10 mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label for="vencimento" class="block text-sm font-medium text-brand-subtle">Data de Vencimento</label><input type="date" id="vencimento" name="vencimento" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div><div><label for="pagamento" class="block text-sm font-medium text-brand-subtle">Data de Pagamento (Opcional)</label><input type="date" id="pagamento" name="pagamento" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div></div>
-        <div><label for="anexo" class="block text-sm font-medium text-brand-subtle">Anexar Comprovante (Opcional)</label><input type="file" id="anexo" name="anexo" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-secondary file:text-white hover:file:bg-blue-600"></div><div id="anexo-preview" class="text-sm text-brand-subtle"></div>
-        <div class="flex justify-end space-x-4 pt-4 flex-shrink-0"><button type="button" onclick="closeModal('lancamentoModal')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">Cancelar</button><button type="submit" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg">Salvar</button></div></form></div></div>
-    <div id="analysisModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden"><div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-2xl m-4 p-6 sm:p-8 transform transition-all max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-4 flex-shrink-0"><h2 class="text-2xl font-bold text-white">✨ Análise Inteligente de Despesas</h2><button onclick="closeModal('analysisModal')" class="text-brand-subtle hover:text-white text-3xl">&times;</button></div><div id="analysisResult" class="text-brand-text space-y-4 overflow-y-auto pr-2"></div></div></div>
-    
-    <!-- Modal de Alunos -->
-    <div id="alunoModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden"><div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-3xl m-4 p-6 sm:p-8 transform transition-all max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-6 flex-shrink-0"><h2 id="alunoModalTitle" class="text-2xl font-bold text-white">Cadastrar Novo Aluno</h2><button onclick="closeModal('alunoModal')" class="text-brand-subtle hover:text-white text-3xl">&times;</button></div><form id="alunoForm" class="space-y-4 overflow-y-auto pr-2">
-        <input type="hidden" id="alunoId">
-        <div class="flex items-center space-x-6 pb-4 border-b border-gray-700">
-            <img id="foto_preview" src="https://placehold.co/96x96/2d3748/e2e8f0?text=Foto" class="w-24 h-24 rounded-full object-cover bg-gray-600 flex-shrink-0">
-            <div class="flex-grow"><label for="foto" class="block text-sm font-medium text-brand-subtle mb-1">Foto do Aluno (PNG, JPG)</label><input type="file" id="foto" accept="image/png, image/jpeg" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-secondary file:text-white hover:file:bg-blue-600 cursor-pointer"></div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label for="nome_completo" class="block text-sm font-medium text-brand-subtle">Nome Completo</label><input type="text" id="nome_completo" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="email" class="block text-sm font-medium text-brand-subtle">Email</label><input type="email" id="email" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="telefone" class="block text-sm font-medium text-brand-subtle">Telefone</label><input type="tel" id="telefone" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="cpf" class="block text-sm font-medium text-brand-subtle">CPF</label><input type="text" id="cpf" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="data_nascimento" class="block text-sm font-medium text-brand-subtle">Data de Nascimento</label><input type="date" id="data_nascimento" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-        </div>
-        <fieldset class="border border-gray-600 p-4 rounded-lg"><legend class="px-2 text-brand-subtle">Plano Atual</legend><div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label for="id_plano_atual" class="block text-sm font-medium text-brand-subtle">Plano</label><select id="id_plano_atual" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></select></div>
-            <div><label for="data_inicio_plano" class="block text-sm font-medium text-brand-subtle">Data de Início (se alterado)</label><input type="date" id="data_inicio_plano" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-        </div></fieldset>
-        <fieldset class="border border-gray-600 p-4 rounded-lg"><legend class="px-2 text-brand-subtle">Endereço</legend><div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="md:col-span-1"><label for="cep" class="block text-sm font-medium text-brand-subtle">CEP</label><input type="text" id="cep" onblur="buscarCep(this.value)" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div class="md:col-span-2"><label for="logradouro" class="block text-sm font-medium text-brand-subtle">Logradouro</label><input type="text" id="logradouro" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="numero" class="block text-sm font-medium text-brand-subtle">Número</label><input type="text" id="numero" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="bairro" class="block text-sm font-medium text-brand-subtle">Bairro</label><input type="text" id="bairro" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="cidade" class="block text-sm font-medium text-brand-subtle">Cidade</label><input type="text" id="cidade" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-        </div></fieldset>
-        <fieldset class="border border-gray-600 p-4 rounded-lg"><legend class="px-2 text-brand-subtle">Anexos do Aluno</legend>
-            <div id="anexos-list" class="space-y-2 mb-4"></div>
-            <label for="anexos_aluno" class="block text-sm font-medium text-brand-subtle">Adicionar novos anexos (Ex: Atestado Médico)</label>
-            <input type="file" id="anexos_aluno" multiple class="mt-1 w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-secondary file:text-white hover:file:bg-blue-600 cursor-pointer">
-        </fieldset>
-        <div class="flex justify-end space-x-4 pt-4 flex-shrink-0"><button type="button" onclick="closeModal('alunoModal')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">Cancelar</button><button type="submit" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg">Salvar</button></div>
-    </form></div></div>
+      </div>
+      <div class="flex flex-col items-end gap-1 text-sm">
+        <span id="user-email" class="text-gray-300"></span>
+        <button
+          id="btn-logout"
+          class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1.5 px-3 rounded-lg text-xs"
+        >
+          Sair
+        </button>
+      </div>
+    </header>
 
-    <!-- Modal de Funcionários -->
-    <div id="funcionarioModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden"><div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-3xl m-4 p-6 sm:p-8 transform transition-all max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-6 flex-shrink-0"><h2 id="funcionarioModalTitle" class="text-2xl font-bold text-white">Cadastrar Novo Funcionário</h2><button onclick="closeModal('funcionarioModal')" class="text-brand-subtle hover:text-white text-3xl">&times;</button></div><form id="funcionarioForm" class="space-y-4 overflow-y-auto pr-2">
-        <input type="hidden" id="funcionarioId">
-        <div class="flex items-center space-x-6 pb-4 border-b border-gray-700">
-            <img id="foto_preview_funcionario" src="https://placehold.co/96x96/2d3748/e2e8f0?text=Foto" class="w-24 h-24 rounded-full object-cover bg-gray-600 flex-shrink-0">
-            <div class="flex-grow"><label for="foto_funcionario" class="block text-sm font-medium text-brand-subtle mb-1">Foto do Funcionário (PNG, JPG)</label><input type="file" id="foto_funcionario" accept="image/png, image/jpeg" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-secondary file:text-white hover:file:bg-blue-600 cursor-pointer"></div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label for="nome_funcionario" class="block text-sm font-medium text-brand-subtle">Nome Completo</label><input type="text" id="nome_funcionario" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="cargo_funcionario" class="block text-sm font-medium text-brand-subtle">Cargo</label><input type="text" id="cargo_funcionario" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="telefone_funcionario" class="block text-sm font-medium text-brand-subtle">Telefone</label><input type="tel" id="telefone_funcionario" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="cpf_funcionario" class="block text-sm font-medium text-brand-subtle">CPF</label><input type="text" id="cpf_funcionario" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="data_admissao" class="block text-sm font-medium text-brand-subtle">Data de Admissão</label><input type="date" id="data_admissao" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="salario_base" class="block text-sm font-medium text-brand-subtle">Salário Base (R$)</label><input type="number" id="salario_base" step="0.01" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-        </div>
-        <fieldset class="border border-gray-600 p-4 rounded-lg"><legend class="px-2 text-brand-subtle">Anexos do Funcionário</legend>
-            <div id="anexos-list-funcionario" class="space-y-2 mb-4"></div>
-            <label for="anexos_funcionario" class="block text-sm font-medium text-brand-subtle">Adicionar novos anexos (Ex: Atestado, Comprovante)</label>
-            <input type="file" id="anexos_funcionario" multiple class="mt-1 w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-secondary file:text-white hover:file:bg-blue-600 cursor-pointer">
-        </fieldset>
-        <div class="flex justify-end space-x-4 pt-4 flex-shrink-0"><button type="button" onclick="closeModal('funcionarioModal')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">Cancelar</button><button type="submit" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg">Salvar</button></div>
-    </form></div></div>
+    <!-- Abas -->
+    <nav class="flex flex-wrap gap-2 mb-6">
+      <button data-tab="visaoGeral" class="tab-btn tab-active py-2 px-4 rounded-lg text-sm font-semibold">
+        Visão Geral
+      </button>
+      <button data-tab="alunos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">
+        Alunos
+      </button>
+      <button data-tab="funcionarios" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">
+        Funcionários
+      </button>
+      <button data-tab="planos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">
+        Planos
+      </button>
+      <button data-tab="lancamentos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">
+        Lançamentos
+      </button>
+      <button data-tab="relatorios" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">
+        Relatórios
+      </button>
+    </nav>
 
-    <div id="planoModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden"><div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-lg m-4 p-6 sm:p-8 transform transition-all max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-6 flex-shrink-0"><h2 id="planoModalTitle" class="text-2xl font-bold text-white">Criar Novo Plano</h2><button onclick="closeModal('planoModal')" class="text-brand-subtle hover:text-white text-3xl">&times;</button></div><form id="planoForm" class="space-y-4 overflow-y-auto pr-2">
-        <input type="hidden" id="planoId">
-        <div><label for="nome_plano" class="block text-sm font-medium text-brand-subtle">Nome</label><input type="text" id="nome_plano" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-        <div><label for="descricao_plano" class="block text-sm font-medium text-brand-subtle">Descrição</label><textarea id="descricao_plano" rows="3" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></textarea></div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label for="valor_plano" class="block text-sm font-medium text-brand-subtle">Valor (R$)</label><input type="number" id="valor_plano" step="0.01" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
-            <div><label for="duracao_meses" class="block text-sm font-medium text-brand-subtle">Duração (meses)</label><input type="number" id="duracao_meses" required class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"></div>
+    <!-- Conteúdo das Abas -->
+    <main>
+      <!-- VISÃO GERAL -->
+      <section id="tab-visaoGeral" class="tab-content">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+            <div class="text-sm text-gray-300 mb-1">Receita Bruta</div>
+            <div id="kpi-receita" class="text-3xl font-bold">R$ 0,00</div>
+          </div>
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+            <div class="text-sm text-gray-300 mb-1">Custo Total</div>
+            <div id="kpi-custo" class="text-3xl font-bold">R$ 0,00</div>
+          </div>
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+            <div class="text-sm text-gray-300 mb-1">Saldo</div>
+            <div id="kpi-saldo" class="text-3xl font-bold">R$ 0,00</div>
+          </div>
         </div>
-        <div><label for="status_plano" class="block text-sm font-medium text-brand-subtle">Status</label><select id="status_plano" class="mt-1 w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2"><option value="Ativo">Ativo</option><option value="Inativo">Inativo</option></select></div>
-        <div class="flex justify-end space-x-4 pt-4 flex-shrink-0"><button type="button" onclick="closeModal('planoModal')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">Cancelar</button><button type="submit" class="bg-brand-primary hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg">Salvar</button></div>
-    </form></div></div>
-    
-    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 hidden">
-        <div class="bg-brand-surface rounded-xl shadow-2xl w-full max-w-sm m-4 p-6 text-center">
-            <h3 id="confirmModalTitle" class="text-xl font-bold text-white mb-4">Confirmar Ação</h3>
-            <p id="confirmModalText" class="text-brand-subtle mb-6">Você tem certeza?</p>
-            <div class="flex justify-center space-x-4">
-                <button id="confirmModalCancel" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">Cancelar</button>
-                <button id="confirmModalOk" class="bg-brand-danger hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg">Confirmar</button>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow lg:col-span-2">
+            <h3 class="text-lg font-bold mb-3">Receita vs. Despesas (Mês Atual)</h3>
+            <canvas id="chart-receita-despesa"></canvas>
+          </div>
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+            <h3 class="text-lg font-bold mb-3">Top 5 Despesas</h3>
+            <canvas id="chart-despesas-top"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ALUNOS -->
+      <section id="tab-alunos" class="tab-content hidden">
+        <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+          <h3 class="text-lg font-bold">Alunos</h3>
+          <button
+            id="btn-add-aluno"
+            class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm"
+          >
+            Novo Aluno
+          </button>
+        </div>
+        <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="border-b border-gray-600">
+                <th class="p-2">Nome</th>
+                <th class="p-2">Email</th>
+                <th class="p-2">Status</th>
+                <th class="p-2">Criado por</th>
+              </tr>
+            </thead>
+            <tbody id="table-alunos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- FUNCIONÁRIOS -->
+      <section id="tab-funcionarios" class="tab-content hidden">
+        <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+          <h3 class="text-lg font-bold">Funcionários</h3>
+          <button
+            id="btn-add-funcionario"
+            class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm"
+          >
+            Novo Funcionário
+          </button>
+        </div>
+        <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="border-b border-gray-600">
+                <th class="p-2">Nome</th>
+                <th class="p-2">Cargo</th>
+                <th class="p-2 text-right">Salário Base</th>
+                <th class="p-2">Criado por</th>
+              </tr>
+            </thead>
+            <tbody id="table-funcionarios"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PLANOS -->
+      <section id="tab-planos" class="tab-content hidden">
+        <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+          <h3 class="text-lg font-bold">Planos</h3>
+          <button
+            id="btn-add-plano"
+            class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm"
+          >
+            Novo Plano
+          </button>
+        </div>
+        <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="border-b border-gray-600">
+                <th class="p-2">Nome</th>
+                <th class="p-2 text-right">Valor</th>
+                <th class="p-2">Status</th>
+                <th class="p-2">Criado por</th>
+              </tr>
+            </thead>
+            <tbody id="table-planos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- LANÇAMENTOS -->
+      <section id="tab-lancamentos" class="tab-content hidden">
+        <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+          <h3 class="text-lg font-bold">Lançamentos</h3>
+          <button
+            id="btn-add-lancamento"
+            class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm"
+          >
+            Novo Lançamento
+          </button>
+        </div>
+        <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="border-b border-gray-600">
+                <th class="p-2">Descrição</th>
+                <th class="p-2">Categoria</th>
+                <th class="p-2">Tipo</th>
+                <th class="p-2 text-right">Valor</th>
+                <th class="p-2">Vencimento</th>
+                <th class="p-2">Criado por</th>
+              </tr>
+            </thead>
+            <tbody id="table-lancamentos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- RELATÓRIOS -->
+      <section id="tab-relatorios" class="tab-content hidden">
+        <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+          <h3 class="text-lg font-bold mb-4">Relatórios (resumo do período atual)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-[#1f2937] p-4 rounded-lg">
+              <div class="text-sm text-gray-300 mb-1">Receita Bruta</div>
+              <div id="rel-receita" class="text-2xl font-bold">R$ 0,00</div>
             </div>
+            <div class="bg-[#1f2937] p-4 rounded-lg">
+              <div class="text-sm text-gray-300 mb-1">Custo Total</div>
+              <div id="rel-custo" class="text-2xl font-bold">R$ 0,00</div>
+            </div>
+            <div class="bg-[#1f2937] p-4 rounded-lg">
+              <div class="text-sm text-gray-300 mb-1">Saldo</div>
+              <div id="rel-saldo" class="text-2xl font-bold">R$ 0,00</div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4">
+            Fase 2: vamos poder detalhar auditoria, filtros avançados, exportação, etc.
+          </p>
         </div>
-    </div>
+      </section>
+    </main>
+  </div>
 
+  <!-- SCRIPT PRINCIPAL -->
+  <script>
+    // =========================
+    // CONFIGURAÇÃO FIREBASE
+    // =========================
 
-    <div id="toast-container"></div>
+    // TODO: 👉 TROCAR PELO SEU CONFIG DO FIREBASE
+    const firebaseConfig = {
+      apiKey: "AIzaSyBEId876zarlIjEKYUz7ejnLhLcstnsHY7Y",
+      authDomain: "sistemadegestaobrabo.firebaseapp.com",
+      projectId: "sistemadegestaobrabo",
+      storageBucket: "sistemadegestaobrabo.firebasestorage.app",
+      messagingSenderId: "1050063988219",
+      appId: "1:1050063988219:web:d5a4b3d1305144840675e"
+    };
 
-    <script>
-        // --- BANCO DE DADOS EM MEMÓRIA E ESTADO GLOBAL ---
-        let database = {};
-        let revenueChart, expensesChart;
-        let currentLancamentoFilter = 'todos';
-        const units = ['Academia Zanco - Cordovil', 'Academia Zanco - Irajá 1', 'Academia Zanco - Irajá 2', 'Academia Zanco - Vila da Penha', 'Academia Zanco - Brás de Pina', 'Academia Zanco - Caxias'];
-        let selectedUnit = units[0];
-        const placeholderFoto = "https://placehold.co/96x96/2d3748/e2e8f0?text=Foto";
+    // Emails autorizados
+    const allowedEmails = [
+      "thiagobrabobm@gmail.com",
+      "marlucezanco02@gmail.com"
+    ];
 
-        // --- PERSISTÊNCIA DE DADOS (LOCAL STORAGE) ---
-        function saveData() {
-            try {
-                localStorage.setItem('academiaDB_v4_5', JSON.stringify(database));
-                console.log("Dados salvos no Local Storage.");
-            } catch (e) {
-                console.error("Erro ao salvar dados:", e);
-                showToast("Erro ao salvar os dados. O armazenamento pode estar cheio.", 'error');
-            }
-        }
+    // Unidades
+    const UNITS = [
+      "Academia Zanco - Cordovil",
+      "Academia Zanco - Irajá 1",
+      "Academia Zanco - Irajá 2",
+      "Academia Zanco - Vila da Penha",
+      "Academia Zanco - Brás de Pina",
+      "Academia Zanco - Caxias"
+    ];
 
-        function loadData() {
-            const savedData = localStorage.getItem('academiaDB_v4_5');
-            if (savedData) {
-                database = JSON.parse(savedData);
-                // Data migration for older structures
-                Object.values(database).forEach(unit => {
-                    if (!unit.funcionarios) unit.funcionarios = [];
-                    unit.alunos.forEach(aluno => {
-                        if (!aluno.plan_history) aluno.plan_history = [];
-                        if (!aluno.status_history) aluno.status_history = [];
-                    });
-                     unit.funcionarios.forEach(func => {
-                        if (!func.foto) func.foto = null;
-                        if (!func.anexos) func.anexos = [];
-                    });
-                    unit.lancamentos.forEach(lanc => {
-                        if (lanc.id_aluno === undefined) lanc.id_aluno = null;
-                        if (lanc.id_funcionario === undefined) lanc.id_funcionario = null;
-                    });
-                });
-                console.log("Dados carregados do Local Storage.");
-            } else {
-                loadInitialData();
-            }
-        }
-        
-        const getCurrentUnitData = () => database[selectedUnit];
+    // Estado global em memória
+    let currentUser = null;
+    let selectedUnit = UNITS[0];
+    let db, auth;
+    let unsubscribers = [];
 
-        // --- FUNÇÕES DE FORMATAÇÃO E UTILIDADES ---
-        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
-        const formatDate = (dateString) => dateString ? new Date(dateString + 'T03:00:00').toLocaleDateString('pt-BR') : '--';
-        const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve({ name: file.name, data: reader.result });
-            reader.onerror = (error) => reject(error);
-            reader.readAsDataURL(file);
+    const state = {
+      planos: [],
+      alunos: [],
+      funcionarios: [],
+      lancamentos: []
+    };
+
+    // Charts
+    let chartReceitaDespesa = null;
+    let chartTopDespesas = null;
+
+    // Formatação
+    const formatBRL = (v) => {
+      const n = Number(v || 0);
+      return n.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
+    };
+
+    const fmtDate = (d) => {
+      if (!d) return "--";
+      const date = (d instanceof Date) ? d : new Date(d);
+      if (isNaN(date)) return "--";
+      return date.toLocaleDateString("pt-BR");
+    };
+
+    // =========================
+    // INICIALIZAÇÃO
+    // =========================
+    function initFirebase() {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      auth = firebase.auth();
+      console.log("Firebase inicializado.");
+    }
+
+    function setupAuth() {
+      const loginScreen = document.getElementById("login-screen");
+      const appDiv = document.getElementById("app");
+      const loginError = document.getElementById("login-error");
+      const userEmailSpan = document.getElementById("user-email");
+
+      document.getElementById("btn-login").addEventListener("click", () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch((err) => {
+          console.error(err);
+          loginError.textContent = "Erro ao fazer login.";
+          loginError.classList.remove("hidden");
         });
-        const getToday = () => new Date().toISOString().split('T')[0];
+      });
 
-        // --- RENDERIZAÇÃO GERAL ---
-        function renderAll() {
-            renderLancamentosTable();
-            renderAlunosTable();
-            renderFuncionariosTable();
-            renderPlanosTable();
-            updateDashboard();
-            renderReport();
+      document.getElementById("btn-logout").addEventListener("click", () => {
+        auth.signOut();
+      });
+
+      auth.onAuthStateChanged((user) => {
+        if (!user) {
+          currentUser = null;
+          appDiv.classList.add("hidden");
+          loginScreen.classList.remove("hidden");
+          return;
         }
 
-        // --- GESTÃO DE PLANOS ---
-        function renderPlanosTable() {
-            const tableBody = document.querySelector("#tabela-planos tbody");
-            const searchTerm = document.getElementById('search-planos').value.toLowerCase();
-            const planos = getCurrentUnitData().planos.filter(p => p.nome_plano.toLowerCase().includes(searchTerm));
-            
-            tableBody.innerHTML = '';
-            if (!planos || planos.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-brand-subtle">Nenhum plano encontrado.</td></tr>`;
-                return;
-            }
-            planos.forEach(plano => {
-                const statusClass = plano.status_plano === 'Ativo' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400';
-                tableBody.innerHTML += `<tr class="border-b border-gray-700 hover:bg-gray-700/50"><td class="p-3 font-medium text-white">${plano.nome_plano}</td><td class="p-3 text-right text-brand-subtle">${formatCurrency(plano.valor)}</td><td class="p-3 text-center text-brand-subtle">${plano.duracao_meses} meses</td><td class="p-3 text-center"><span class="${statusClass} text-xs font-bold px-2 py-1 rounded-full">${plano.status_plano}</span></td><td class="p-3 text-center space-x-4"><button onclick="openPlanoModal(${plano.id_plano})" class="text-blue-400 hover:text-blue-300">Editar</button><button onclick="deletePlano(${plano.id_plano})" class="text-red-400 hover:text-red-300">Excluir</button></td></tr>`;
-            });
-        }
-        function openPlanoModal(id = null) {
-            const form = document.getElementById('planoForm');
-            form.reset();
-            document.getElementById('planoModalTitle').textContent = id ? 'Editar Plano' : 'Criar Novo Plano';
-            if (id) {
-                const plano = getCurrentUnitData().planos.find(p => p.id_plano === id);
-                document.getElementById('planoId').value = plano.id_plano;
-                document.getElementById('nome_plano').value = plano.nome_plano;
-                document.getElementById('descricao_plano').value = plano.descricao;
-                document.getElementById('valor_plano').value = plano.valor;
-                document.getElementById('duracao_meses').value = plano.duracao_meses;
-                document.getElementById('status_plano').value = plano.status_plano;
-            } else {
-                document.getElementById('planoId').value = '';
-            }
-            openModal('planoModal');
-        }
-        document.getElementById('planoForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const id = document.getElementById('planoId').value;
-            const planoData = {nome_plano: document.getElementById('nome_plano').value, descricao: document.getElementById('descricao_plano').value, valor: parseFloat(document.getElementById('valor_plano').value), duracao_meses: parseInt(document.getElementById('duracao_meses').value), status_plano: document.getElementById('status_plano').value};
-            const planos = getCurrentUnitData().planos;
-            if (id) {
-                const index = planos.findIndex(p => p.id_plano == id);
-                planos[index] = { ...planos[index], ...planoData };
-            } else {
-                planoData.id_plano = planos.length > 0 ? Math.max(...planos.map(p => p.id_plano)) + 1 : 1;
-                planos.push(planoData);
-            }
-            saveData();
-            renderPlanosTable();
-            closeModal('planoModal');
-            showToast('Plano salvo com sucesso!');
-        });
-        function deletePlano(id) {
-            const alunos = getCurrentUnitData().alunos;
-            const planoEmUso = alunos.some(aluno => aluno.id_plano_atual === id);
-
-            if (planoEmUso) {
-                showToast('Não é possível excluir. Plano em uso por um ou mais alunos.', 'error');
-                return;
-            }
-
-            showConfirmModal('Excluir Plano', 'Tem certeza que deseja excluir este plano? Esta ação não pode ser desfeita.', () => {
-                let planos = getCurrentUnitData().planos;
-                database[selectedUnit].planos = planos.filter(p => p.id_plano !== id);
-                saveData();
-                renderAll();
-                showToast('Plano excluído com sucesso!', 'error');
-            });
+        const email = user.email?.toLowerCase() || "";
+        if (!allowedEmails.includes(email)) {
+          currentUser = null;
+          loginError.textContent =
+            "Este email não está autorizado. Use uma conta permitida.";
+          loginError.classList.remove("hidden");
+          appDiv.classList.add("hidden");
+          loginScreen.classList.remove("hidden");
+          auth.signOut();
+          return;
         }
 
-        // --- GESTÃO DE ALUNOS ---
-        function renderAlunosTable() {
-            const tableBody = document.querySelector("#tabela-alunos tbody");
-            const searchTerm = document.getElementById('search-alunos').value.toLowerCase();
-            const unitData = getCurrentUnitData();
-            const alunos = unitData.alunos.filter(a => a.nome_completo.toLowerCase().includes(searchTerm));
-            
-            tableBody.innerHTML = '';
-            if (!alunos || alunos.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-brand-subtle">Nenhum aluno encontrado.</td></tr>`;
-                return;
-            }
-            alunos.forEach(aluno => {
-                const plano = unitData.planos.find(p => p.id_plano === aluno.id_plano_atual) || { nome_plano: 'N/A' };
-                const statusClass = aluno.status_aluno === 'Ativo' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400';
-                const fotoHtml = `<img src="${aluno.foto || placeholderFoto}" class="w-10 h-10 rounded-full object-cover bg-gray-700">`;
-                tableBody.innerHTML += `<tr class="border-b border-gray-700 hover:bg-gray-700/50">
-                    <td class="p-3">${fotoHtml}</td>
-                    <td class="p-3 font-medium text-white">${aluno.nome_completo}</td>
-                    <td class="p-3 text-brand-subtle">${plano.nome_plano}</td>
-                    <td class="p-3 text-brand-subtle">${aluno.email}</td>
-                    <td class="p-3 text-center"><span class="${statusClass} text-xs font-bold px-2 py-1 rounded-full">${aluno.status_aluno}</span></td>
-                    <td class="p-3 text-center space-x-2">
-                        <button onclick="imprimirFichaAluno(${aluno.id_aluno})" class="text-gray-400 hover:text-white" title="Imprimir Ficha">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        </button>
-                        <button onclick="openAlunoModal(${aluno.id_aluno})" class="text-blue-400 hover:text-blue-300" title="Editar">Editar</button>
-                        <button onclick="deleteAluno(${aluno.id_aluno})" class="text-red-400 hover:text-red-300" title="Excluir">Excluir</button>
-                    </td>
-                </tr>`;
-            });
-        }
-        function populatePlanosDropdown() {
-            const select = document.getElementById('id_plano_atual');
-            select.innerHTML = '<option value="">Selecione um plano</option>';
-            getCurrentUnitData().planos.filter(p => p.status_plano === 'Ativo').forEach(plano => {
-                select.innerHTML += `<option value="${plano.id_plano}">${plano.nome_plano} - ${formatCurrency(plano.valor)}</option>`;
-            });
-        }
-        function openAlunoModal(id = null) {
-            const form = document.getElementById('alunoForm');
-            form.reset();
-            populatePlanosDropdown();
-            document.getElementById('foto_preview').src = placeholderFoto;
-            document.getElementById('anexos-list').innerHTML = '';
-            document.getElementById('alunoModalTitle').textContent = id ? 'Editar Aluno' : 'Cadastrar Novo Aluno';
-            document.getElementById('data_inicio_plano').value = getToday();
-            
-            if (id) {
-                const aluno = getCurrentUnitData().alunos.find(a => a.id_aluno === id);
-                Object.keys(aluno).forEach(key => {
-                    const el = document.getElementById(key);
-                    if(el) el.value = aluno[key];
-                });
-                if (aluno.foto) {
-                    document.getElementById('foto_preview').src = aluno.foto;
-                }
-                renderAnexosList(id, 'aluno');
-            } else {
-                document.getElementById('alunoId').value = '';
-            }
-            openModal('alunoModal');
-        }
-        document.getElementById('foto').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('foto_preview').src = e.target.result;
-                }
-                reader.readAsDataURL(file);
-            }
-        });
-        async function handleAlunoFormSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('alunoId').value;
-            const alunos = getCurrentUnitData().alunos;
-            let alunoExistente = id ? alunos.find(a => a.id_aluno == id) : {};
-            const id_plano_novo = parseInt(document.getElementById('id_plano_atual').value);
+        // Usuário OK
+        currentUser = user;
+        userEmailSpan.textContent = user.email;
+        loginError.classList.add("hidden");
+        loginScreen.classList.add("hidden");
+        appDiv.classList.remove("hidden");
 
-            const alunoData = {
-                nome_completo: document.getElementById('nome_completo').value, email: document.getElementById('email').value, telefone: document.getElementById('telefone').value, cpf: document.getElementById('cpf').value, data_nascimento: document.getElementById('data_nascimento').value, id_plano_atual: id_plano_novo, cep: document.getElementById('cep').value, logradouro: document.getElementById('logradouro').value, numero: document.getElementById('numero').value, bairro: document.getElementById('bairro').value, cidade: document.getElementById('cidade').value,
-                foto: alunoExistente.foto || null,
-                anexos: alunoExistente.anexos || [],
-                plan_history: alunoExistente.plan_history || [],
-                status_history: alunoExistente.status_history || []
-            };
+        // Carregar dados da unidade
+        listenUnit(selectedUnit);
+      });
+    }
 
-            if (!id || alunoExistente.id_plano_atual !== id_plano_novo) {
-                const plano = getCurrentUnitData().planos.find(p => p.id_plano === id_plano_novo);
-                if (plano) {
-                    const data_inicio_novo_plano = document.getElementById('data_inicio_plano').value || getToday();
-                    const dataInicio = new Date(data_inicio_novo_plano + 'T03:00:00');
-                    const dataFim = new Date(dataInicio);
-                    dataFim.setMonth(dataInicio.getMonth() + plano.duracao_meses);
-                    
-                    alunoData.plan_history.push({
-                        id_plano: plano.id_plano,
-                        nome_plano: plano.nome_plano,
-                        data_inicio: dataInicio.toISOString().split('T')[0],
-                        data_fim: dataFim.toISOString().split('T')[0]
-                    });
-                }
-            }
+    // =========================
+    // LISTEN FIRESTORE
+    // =========================
+    function listenUnit(unitId) {
+      // Cancelar listeners antigos
+      unsubscribers.forEach((u) => u && u());
+      unsubscribers = [];
 
-            const statusAtual = 'Ativo';
-            if (!alunoExistente.status_aluno || alunoExistente.status_aluno !== statusAtual) {
-                 alunoData.status_history.push({ status: statusAtual, data: getToday() });
-                 alunoData.status_aluno = statusAtual;
-            }
+      state.planos = [];
+      state.alunos = [];
+      state.funcionarios = [];
+      state.lancamentos = [];
 
-            const fotoFile = document.getElementById('foto').files[0];
-            if (fotoFile) alunoData.foto = (await readFileAsDataURL(fotoFile)).data;
+      if (!db) return;
 
-            const anexoFiles = document.getElementById('anexos_aluno').files;
-            if (anexoFiles.length > 0) {
-                const novosAnexos = await Promise.all(Array.from(anexoFiles).map(readFileAsDataURL));
-                alunoData.anexos.push(...novosAnexos);
-            }
+      const unitRef = db.collection("unidades").doc(unitId);
 
-            if (id) {
-                const index = alunos.findIndex(a => a.id_aluno == id);
-                alunos[index] = { ...alunos[index], ...alunoData };
-            } else {
-                alunoData.id_aluno = alunos.length > 0 ? Math.max(...alunos.map(a => a.id_aluno)) + 1 : 1;
-                alunos.push(alunoData);
-            }
-            
-            saveData();
-            renderAll();
-            closeModal('alunoModal');
-            showToast('Aluno salvo com sucesso!');
-        }
-        document.getElementById('alunoForm').addEventListener('submit', handleAlunoFormSubmit);
-        
-        function deleteAluno(id) {
-            showConfirmModal('Excluir Aluno', 'Tem certeza que deseja excluir este aluno? Esta ação não pode ser desfeita.', () => {
-                database[selectedUnit].alunos = getCurrentUnitData().alunos.filter(a => a.id_aluno !== id);
-                saveData();
-                renderAll();
-                showToast('Aluno excluído com sucesso!', 'error');
-            });
-        }
-        
-        // --- GESTÃO DE FUNCIONÁRIOS ---
-        function renderFuncionariosTable() {
-            const tableBody = document.querySelector("#tabela-funcionarios tbody");
-            const searchTerm = document.getElementById('search-funcionarios').value.toLowerCase();
-            const funcionarios = getCurrentUnitData().funcionarios.filter(f => f.nome.toLowerCase().includes(searchTerm));
-            
-            tableBody.innerHTML = '';
-            if (!funcionarios || funcionarios.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-brand-subtle">Nenhum funcionário encontrado.</td></tr>`;
-                return;
-            }
-            funcionarios.forEach(func => {
-                const statusClass = func.status === 'Ativo' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400';
-                const fotoHtml = `<img src="${func.foto || placeholderFoto}" class="w-10 h-10 rounded-full object-cover bg-gray-700">`;
-                tableBody.innerHTML += `<tr class="border-b border-gray-700 hover:bg-gray-700/50">
-                    <td class="p-3">${fotoHtml}</td>
-                    <td class="p-3 font-medium text-white">${func.nome}</td>
-                    <td class="p-3 text-brand-subtle">${func.cargo}</td>
-                    <td class="p-3 text-brand-subtle">${func.telefone}</td>
-                    <td class="p-3 text-right text-brand-subtle">${formatCurrency(func.salario_base)}</td>
-                    <td class="p-3 text-center"><span class="${statusClass} text-xs font-bold px-2 py-1 rounded-full">${func.status}</span></td>
-                    <td class="p-3 text-center space-x-2">
-                        <button onclick="imprimirFichaFuncionario(${func.id})" class="text-gray-400 hover:text-white" title="Imprimir Ficha">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        </button>
-                        <button onclick="openFuncionarioModal(${func.id})" class="text-blue-400 hover:text-blue-300" title="Editar">Editar</button>
-                        <button onclick="deleteFuncionario(${func.id})" class="text-red-400 hover:text-red-300" title="Excluir">Excluir</button>
-                    </td>
-                </tr>`;
-            });
-        }
-        function openFuncionarioModal(id = null) {
-            const form = document.getElementById('funcionarioForm');
-            form.reset();
-            document.getElementById('funcionarioModalTitle').textContent = id ? 'Editar Funcionário' : 'Cadastrar Novo Funcionário';
-            document.getElementById('foto_preview_funcionario').src = placeholderFoto;
-            document.getElementById('anexos-list-funcionario').innerHTML = '';
+      // Planos
+      unsubscribers.push(
+        unitRef.collection("planos").onSnapshot((snap) => {
+          state.planos = snap.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          renderPlanos();
+          updateKPIsAndCharts();
+        })
+      );
 
-            if (id) {
-                const func = getCurrentUnitData().funcionarios.find(f => f.id === id);
-                document.getElementById('funcionarioId').value = func.id;
-                document.getElementById('nome_funcionario').value = func.nome;
-                document.getElementById('cargo_funcionario').value = func.cargo;
-                document.getElementById('telefone_funcionario').value = func.telefone;
-                document.getElementById('cpf_funcionario').value = func.cpf;
-                document.getElementById('data_admissao').value = func.data_admissao;
-                document.getElementById('salario_base').value = func.salario_base;
-                if (func.foto) {
-                    document.getElementById('foto_preview_funcionario').src = func.foto;
-                }
-                renderAnexosList(id, 'funcionario');
-            } else {
-                document.getElementById('funcionarioId').value = '';
-            }
-            openModal('funcionarioModal');
-        }
-        document.getElementById('foto_funcionario').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('foto_preview_funcionario').src = e.target.result;
-                }
-                reader.readAsDataURL(file);
-            }
-        });
-        async function handleFuncionarioFormSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('funcionarioId').value;
-            const funcionarios = getCurrentUnitData().funcionarios;
-            let funcExistente = id ? funcionarios.find(f => f.id == id) : {};
+      // Alunos
+      unsubscribers.push(
+        unitRef.collection("alunos").onSnapshot((snap) => {
+          state.alunos = snap.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          renderAlunos();
+        })
+      );
 
-            const funcData = {
-                nome: document.getElementById('nome_funcionario').value,
-                cargo: document.getElementById('cargo_funcionario').value,
-                telefone: document.getElementById('telefone_funcionario').value,
-                cpf: document.getElementById('cpf_funcionario').value,
-                data_admissao: document.getElementById('data_admissao').value,
-                salario_base: parseFloat(document.getElementById('salario_base').value),
-                status: 'Ativo',
-                foto: funcExistente.foto || null,
-                anexos: funcExistente.anexos || []
-            };
+      // Funcionários
+      unsubscribers.push(
+        unitRef.collection("funcionarios").onSnapshot((snap) => {
+          state.funcionarios = snap.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          renderFuncionarios();
+        })
+      );
 
-            const fotoFile = document.getElementById('foto_funcionario').files[0];
-            if (fotoFile) funcData.foto = (await readFileAsDataURL(fotoFile)).data;
+      // Lançamentos
+      unsubscribers.push(
+        unitRef
+          .collection("lancamentos")
+          .orderBy("dataVencimento", "desc")
+          .onSnapshot((snap) => {
+            state.lancamentos = snap.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+            renderLancamentos();
+            updateKPIsAndCharts();
+          })
+      );
+    }
 
-            const anexoFiles = document.getElementById('anexos_funcionario').files;
-            if (anexoFiles.length > 0) {
-                const novosAnexos = await Promise.all(Array.from(anexoFiles).map(readFileAsDataURL));
-                funcData.anexos.push(...novosAnexos);
-            }
+    // =========================
+    // RENDERIZAÇÃO UI
+    // =========================
+    function renderUnitsSelector() {
+      const sel = document.getElementById("unit-selector");
+      sel.innerHTML = "";
+      UNITS.forEach((u) => {
+        const opt = document.createElement("option");
+        opt.value = u;
+        opt.textContent = u;
+        if (u === selectedUnit) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener("change", (e) => {
+        selectedUnit = e.target.value;
+        listenUnit(selectedUnit);
+      });
+    }
 
-            if (id) {
-                const index = funcionarios.findIndex(f => f.id == id);
-                funcionarios[index] = { ...funcionarios[index], ...funcData };
-            } else {
-                funcData.id = funcionarios.length > 0 ? Math.max(...funcionarios.map(f => f.id)) + 1 : 1;
-                funcionarios.push(funcData);
-            }
-            
-            saveData();
-            renderFuncionariosTable();
-            closeModal('funcionarioModal');
-            showToast('Funcionário salvo com sucesso!');
-        }
-        document.getElementById('funcionarioForm').addEventListener('submit', handleFuncionarioFormSubmit);
-        function deleteFuncionario(id) {
-            showConfirmModal('Excluir Funcionário', 'Tem certeza que deseja excluir este funcionário? Esta ação não pode ser desfeita.', () => {
-                database[selectedUnit].funcionarios = getCurrentUnitData().funcionarios.filter(f => f.id !== id);
-                saveData();
-                renderAll();
-                showToast('Funcionário excluído com sucesso!', 'error');
-            });
-        }
+    function renderAlunos() {
+      const tbody = document.getElementById("table-alunos");
+      tbody.innerHTML = "";
+      if (state.alunos.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.className = "p-2 text-gray-400";
+        td.textContent = "Nenhum aluno cadastrado.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
 
-        // --- GESTÃO DE ANEXOS (Genérica) ---
-        function renderAnexosList(entityId, type) {
-            const listContainer = document.getElementById(type === 'aluno' ? 'anexos-list' : 'anexos-list-funcionario');
-            const collection = type === 'aluno' ? getCurrentUnitData().alunos : getCurrentUnitData().funcionarios;
-            const entity = collection.find(e => e[type === 'aluno' ? 'id_aluno' : 'id'] === entityId);
-            
-            listContainer.innerHTML = '';
-            if (entity && entity.anexos && entity.anexos.length > 0) {
-                entity.anexos.forEach((anexo, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'flex items-center justify-between bg-gray-700 p-2 rounded';
-                    item.innerHTML = `<a href="${anexo.data}" target="_blank" class="text-sm text-brand-secondary hover:underline truncate pr-2">${anexo.name}</a><button type="button" onclick="handleRemoverAnexo(${entityId}, ${index}, '${type}')" class="text-red-400 hover:text-red-300 text-xs font-bold">REMOVER</button>`;
-                    listContainer.appendChild(item);
-                });
-            } else {
-                listContainer.innerHTML = `<p class="text-sm text-brand-subtle">Nenhum anexo encontrado.</p>`;
-            }
-        }
-        function handleRemoverAnexo(entityId, anexoIndex, type) {
-            showConfirmModal('Remover Anexo', 'Tem certeza que deseja remover este anexo?', () => {
-                const collection = type === 'aluno' ? getCurrentUnitData().alunos : getCurrentUnitData().funcionarios;
-                const entity = collection.find(e => e[type === 'aluno' ? 'id_aluno' : 'id'] === entityId);
-                entity.anexos.splice(anexoIndex, 1);
-                renderAnexosList(entityId, type);
-                showToast('Anexo removido da lista. Salve o formulário para confirmar.', 'error');
-            });
-        }
-        
-        // --- FUNÇÕES DE IMPRESSÃO ---
-        function imprimirListaAlunos() {
-            const searchTerm = document.getElementById('search-alunos').value.toLowerCase();
-            const unitData = getCurrentUnitData();
-            const alunos = unitData.alunos.filter(a => a.nome_completo.toLowerCase().includes(searchTerm));
-            const selectedUnitName = document.getElementById('unit-selector').value;
+      state.alunos.forEach((a) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
+        tr.innerHTML = `
+          <td class="p-2">${a.nome_completo || "--"}</td>
+          <td class="p-2">${a.email || "--"}</td>
+          <td class="p-2">${a.status_aluno || "Ativo"}</td>
+          <td class="p-2 text-xs text-gray-300">${a.createdBy || "--"} ${
+          a.createdAt ? "(" + fmtDate(a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) + ")" : ""
+        }</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-            if (alunos.length === 0) {
-                showToast("Nenhum aluno para imprimir.", "error"); return;
-            }
+    function renderFuncionarios() {
+      const tbody = document.getElementById("table-funcionarios");
+      tbody.innerHTML = "";
+      if (state.funcionarios.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.className = "p-2 text-gray-400";
+        td.textContent = "Nenhum funcionário cadastrado.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
 
-            let alunosHtml = alunos.map(aluno => {
-                const plano = unitData.planos.find(p => p.id_plano === aluno.id_plano_atual) || { nome_plano: 'N/A' };
-                return `<tr><td>${aluno.nome_completo}</td><td>${plano.nome_plano}</td><td>${aluno.email}</td><td>${aluno.status_aluno}</td></tr>`;
-            }).join('');
+      state.funcionarios.forEach((f) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
+        tr.innerHTML = `
+          <td class="p-2">${f.nome || "--"}</td>
+          <td class="p-2">${f.cargo || "--"}</td>
+          <td class="p-2 text-right">${formatBRL(f.salario_base)}</td>
+          <td class="p-2 text-xs text-gray-300">${f.createdBy || "--"} ${
+          f.createdAt ? "(" + fmtDate(f.createdAt.toDate ? f.createdAt.toDate() : f.createdAt) + ")" : ""
+        }</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-            const printWindow = window.open('', '', 'height=800,width=800');
-            printWindow.document.write('<html><head><title>Lista de Alunos</title>');
-            printWindow.document.write('<style>body{font-family:sans-serif;color:black;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}h2,p{color:black !important;}</style>');
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(`<h2>Lista de Alunos - ${selectedUnitName}</h2>`);
-            printWindow.document.write(`<p>Total de alunos na lista: ${alunos.length}</p>`);
-            printWindow.document.write(`<p>Gerado em: ${new Date().toLocaleDateString('pt-BR')}</p>`);
-            printWindow.document.write('<table><thead><tr><th>Nome</th><th>Plano</th><th>Email</th><th>Status</th></tr></thead><tbody>' + alunosHtml + '</tbody></table>');
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
-        }
-        function imprimirFichaAluno(alunoId) {
-            const unitData = getCurrentUnitData();
-            const aluno = unitData.alunos.find(a => a.id_aluno === alunoId);
-            if (!aluno) { showToast("Aluno não encontrado.", "error"); return; }
-            const selectedUnitName = document.getElementById('unit-selector').value;
-            const lancamentosAluno = unitData.lancamentos.filter(l => l.id_aluno === alunoId).sort((a,b) => new Date(b.dataVencimento) - new Date(a.dataVencimento));
+    function renderPlanos() {
+      const tbody = document.getElementById("table-planos");
+      tbody.innerHTML = "";
+      if (state.planos.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.className = "p-2 text-gray-400";
+        td.textContent = "Nenhum plano cadastrado.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
 
-            let planoHistoryHtml = (aluno.plan_history || []).map(h => `<li>${h.nome_plano} (de ${formatDate(h.data_inicio)} a ${formatDate(h.data_fim)})</li>`).join('');
-            let statusHistoryHtml = (aluno.status_history || []).map(h => `<li>${h.status} em ${formatDate(h.data)}</li>`).join('');
-            let lancamentosHtml = lancamentosAluno.map(l => `<tr>
-                <td>${l.descricao}</td>
-                <td>${formatDate(l.dataVencimento)}</td>
-                <td>${l.dataPagamento ? 'Pago' : 'Pendente'}</td>
-                <td style="text-align:right;">${formatCurrency(l.valor)}</td>
-            </tr>`).join('');
+      state.planos.forEach((p) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
+        tr.innerHTML = `
+          <td class="p-2">${p.nome_plano || "--"}</td>
+          <td class="p-2 text-right">${formatBRL(p.valor)}</td>
+          <td class="p-2">${p.status_plano || "Ativo"}</td>
+          <td class="p-2 text-xs text-gray-300">${p.createdBy || "--"} ${
+          p.createdAt ? "(" + fmtDate(p.createdAt.toDate ? p.createdAt.toDate() : p.createdAt) + ")" : ""
+        }</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-            const fichaHtml = `
-                <div style="display: flex; align-items: flex-start; gap: 20px; margin-bottom: 20px;">
-                    <img src="${aluno.foto || placeholderFoto}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover;">
-                    <div>
-                        <h2 style="font-size: 24px; margin: 0;">${aluno.nome_completo}</h2>
-                        <p><strong>Email:</strong> ${aluno.email || '--'}</p>
-                        <p><strong>Telefone:</strong> ${aluno.telefone || '--'}</p>
-                        <p><strong>CPF:</strong> ${aluno.cpf || '--'}</p>
-                    </div>
-                </div>
-                <hr>
-                <h3>Histórico de Planos</h3>
-                ${planoHistoryHtml ? `<ul>${planoHistoryHtml}</ul>` : '<p>Nenhum histórico de planos.</p>'}
-                <h3>Histórico de Status</h3>
-                ${statusHistoryHtml ? `<ul>${statusHistoryHtml}</ul>` : '<p>Nenhum histórico de status.</p>'}
-                <h3>Extrato Financeiro</h3>
-                <table><thead><tr><th>Descrição</th><th>Vencimento</th><th>Status</th><th style="text-align:right;">Valor</th></tr></thead><tbody>
-                ${lancamentosHtml || '<tr><td colspan="4">Nenhum lançamento financeiro encontrado.</td></tr>'}
-                </tbody></table>
-            `;
+    function renderLancamentos() {
+      const tbody = document.getElementById("table-lancamentos");
+      tbody.innerHTML = "";
+      if (state.lancamentos.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 6;
+        td.className = "p-2 text-gray-400";
+        td.textContent = "Nenhum lançamento cadastrado.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
 
-            const printWindow = window.open('', '', 'height=800,width=800');
-            printWindow.document.write('<html><head><title>Ficha do Aluno</title>');
-            printWindow.document.write('<style>body{font-family:sans-serif;color:black;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}h2,h3,p,div{color:black !important;} hr{margin: 20px 0; border-top: 1px solid #ccc;}</style>');
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(`<h1>Ficha Cadastral - ${selectedUnitName}</h1>`);
-            printWindow.document.write(fichaHtml);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
-        }
-        function imprimirListaFuncionarios() {
-            const searchTerm = document.getElementById('search-funcionarios').value.toLowerCase();
-            const unitData = getCurrentUnitData();
-            const funcionarios = unitData.funcionarios.filter(f => f.nome.toLowerCase().includes(searchTerm));
-            const selectedUnitName = document.getElementById('unit-selector').value;
+      state.lancamentos.forEach((l) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
+        const valor = Number(l.valor || 0);
+        const tipo = l.tipo || "DESPESA";
+        const sinal = tipo === "DESPESA" ? "-" : "+";
+        const valorClass = tipo === "DESPESA" ? "text-red-300" : "text-green-300";
 
-            if (funcionarios.length === 0) {
-                showToast("Nenhum funcionário para imprimir.", "error"); return;
-            }
+        tr.innerHTML = `
+          <td class="p-2">${l.descricao || "--"}</td>
+          <td class="p-2">${l.categoria || "--"}</td>
+          <td class="p-2">${tipo}</td>
+          <td class="p-2 text-right ${valorClass}">${sinal} ${formatBRL(valor)}</td>
+          <td class="p-2">${l.dataVencimento || "--"}</td>
+          <td class="p-2 text-xs text-gray-300">${l.createdBy || "--"} ${
+          l.createdAt ? "(" + fmtDate(l.createdAt.toDate ? l.createdAt.toDate() : l.createdAt) + ")" : ""
+        }</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-            let funcionariosHtml = funcionarios.map(func => `<tr><td>${func.nome}</td><td>${func.cargo}</td><td>${func.telefone}</td><td>${func.status}</td></tr>`).join('');
+    // =========================
+    // KPIs & GRÁFICOS
+    // =========================
+    function updateKPIsAndCharts() {
+      const receitaTotal = state.lancamentos
+        .filter((l) => l.tipo === "RECEITA")
+        .reduce((acc, l) => acc + Number(l.valor || 0), 0);
+      const custoTotal = state.lancamentos
+        .filter((l) => l.tipo === "DESPESA")
+        .reduce((acc, l) => acc + Number(l.valor || 0), 0);
+      const saldo = receitaTotal - custoTotal;
 
-            const printWindow = window.open('', '', 'height=800,width=800');
-            printWindow.document.write('<html><head><title>Lista de Funcionários</title>');
-            printWindow.document.write('<style>body{font-family:sans-serif;color:black;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}h2,p{color:black !important;}</style>');
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(`<h2>Lista de Funcionários - ${selectedUnitName}</h2>`);
-            printWindow.document.write(`<p>Total de funcionários na lista: ${funcionarios.length}</p>`);
-            printWindow.document.write(`<p>Gerado em: ${new Date().toLocaleDateString('pt-BR')}</p>`);
-            printWindow.document.write('<table><thead><tr><th>Nome</th><th>Cargo</th><th>Telefone</th><th>Status</th></tr></thead><tbody>' + funcionariosHtml + '</tbody></table>');
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
-        }
-        function imprimirFichaFuncionario(funcId) {
-            const unitData = getCurrentUnitData();
-            const funcionario = unitData.funcionarios.find(f => f.id === funcId);
-            if (!funcionario) { showToast("Funcionário não encontrado.", "error"); return; }
-            const selectedUnitName = document.getElementById('unit-selector').value;
-            const lancamentosFuncionario = unitData.lancamentos.filter(l => l.id_funcionario === funcId).sort((a, b) => new Date(b.dataVencimento) - new Date(a.dataVencimento));
+      document.getElementById("kpi-receita").textContent = formatBRL(receitaTotal);
+      document.getElementById("kpi-custo").textContent = formatBRL(custoTotal);
+      document.getElementById("kpi-saldo").textContent = formatBRL(saldo);
 
-            let lancamentosHtml = lancamentosFuncionario.map(l => `<tr>
-                <td>${l.descricao}</td>
-                <td>${l.categoria}</td>
-                <td>${formatDate(l.dataPagamento || l.dataVencimento)}</td>
-                <td style="text-align:right;">${formatCurrency(l.valor)}</td>
-            </tr>`).join('');
+      document.getElementById("rel-receita").textContent = formatBRL(receitaTotal);
+      document.getElementById("rel-custo").textContent = formatBRL(custoTotal);
+      document.getElementById("rel-saldo").textContent = formatBRL(saldo);
 
-            const fichaHtml = `
-                <div style="display: flex; align-items: flex-start; gap: 20px; margin-bottom: 20px;">
-                    <img src="${funcionario.foto || placeholderFoto}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover;">
-                    <div>
-                        <h2 style="font-size: 24px; margin: 0;">${funcionario.nome}</h2>
-                        <p><strong>Cargo:</strong> ${funcionario.cargo}</p>
-                        <p><strong>Telefone:</strong> ${funcionario.telefone || '--'}</p>
-                        <p><strong>Admissão:</strong> ${formatDate(funcionario.data_admissao)}</p>
-                        <p><strong>Salário Base:</strong> ${formatCurrency(funcionario.salario_base)}</p>
-                    </div>
-                </div>
-                <hr>
-                <h3>Histórico de Pagamentos</h3>
-                <table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th style="text-align:right;">Valor</th></tr></thead><tbody>
-                ${lancamentosHtml || '<tr><td colspan="4">Nenhum pagamento encontrado.</td></tr>'}
-                </tbody></table>
-            `;
+      // Gráfico receita x despesa
+      const ctx1 = document.getElementById("chart-receita-despesa").getContext("2d");
+      if (chartReceitaDespesa) chartReceitaDespesa.destroy();
+      chartReceitaDespesa = new Chart(ctx1, {
+        type: "bar",
+        data: {
+          labels: ["Mês Atual"],
+          datasets: [
+            { label: "Receita", data: [receitaTotal], backgroundColor: "rgba(72, 187, 120, 0.7)" },
+            { label: "Despesas", data: [custoTotal], backgroundColor: "rgba(245, 101, 101, 0.7)" }
+          ]
+        },
+        options: { responsive: true }
+      });
 
-            const printWindow = window.open('', '', 'height=800,width=800');
-            printWindow.document.write('<html><head><title>Ficha do Funcionário</title>');
-            printWindow.document.write('<style>body{font-family:sans-serif;color:black;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}h2,h3,p,div{color:black !important;} hr{margin: 20px 0; border-top: 1px solid #ccc;}</style>');
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(`<h1>Ficha do Funcionário - ${selectedUnitName}</h1>`);
-            printWindow.document.write(fichaHtml);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
-        }
-        
-        // --- API VIA CEP ---
-        async function buscarCep(cep) {
-            const cleanCep = cep.replace(/\D/g, '');
-            if (cleanCep.length !== 8) return;
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-                if (!response.ok) throw new Error('CEP não encontrado');
-                const data = await response.json();
-                if (data.erro) {
-                   showToast('CEP não encontrado.', 'error');
-                } else {
-                    document.getElementById('logradouro').value = data.logradouro;
-                    document.getElementById('bairro').value = data.bairro;
-                    document.getElementById('cidade').value = data.localidade;
-                    showToast('Endereço preenchido!');
-                }
-            } catch (error) {
-                console.error("Erro ao buscar CEP:", error);
-                showToast('Erro ao buscar CEP.', 'error');
-            }
-        }
-
-        // --- GESTÃO DE LANÇAMENTOS (COM ANEXO) ---
-        function filterLancamentos(filterType) {
-            if (filterType) {
-                currentLancamentoFilter = filterType;
-                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById(`filter-${filterType}`).classList.add('active');
-            }
-            renderLancamentosTable();
-        }
-        function renderLancamentosTable() {
-            const tableBody = document.querySelector("#tabela-lancamentos tbody");
-            const searchTerm = document.getElementById('search-lancamentos').value.toLowerCase();
-            let dataToRender = getCurrentUnitData().lancamentos;
-
-            if (currentLancamentoFilter === 'receitas') dataToRender = dataToRender.filter(l => l.tipo === 'RECEITA');
-            else if (currentLancamentoFilter === 'despesas') dataToRender = dataToRender.filter(l => l.tipo === 'DESPESA');
-            else if (currentLancamentoFilter === 'pendentes') dataToRender = dataToRender.filter(l => !l.dataPagamento);
-            if (searchTerm) dataToRender = dataToRender.filter(l => l.descricao.toLowerCase().includes(searchTerm));
-            
-            tableBody.innerHTML = '';
-            if (dataToRender.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-brand-subtle">Nenhum lançamento encontrado.</td></tr>`;
-                return;
-            }
-            dataToRender.slice().sort((a,b) => new Date(b.dataVencimento) - new Date(a.dataVencimento)).forEach(lanc => {
-                const isDespesa = lanc.tipo === 'DESPESA';
-                const statusClass = lanc.dataPagamento ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400';
-                const statusText = lanc.dataPagamento ? (isDespesa ? 'Pago' : 'Recebido') : 'Pendente';
-                const valorClass = isDespesa ? 'text-brand-danger' : 'text-brand-primary';
-                const sinal = isDespesa ? '-' : '+';
-                const anexoIcon = lanc.anexo ? `<a href="${lanc.anexo.data}" target="_blank" title="${lanc.anexo.name}" class="inline-block text-brand-secondary hover:text-blue-300"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></a>` : '<span>--</span>';
-
-                tableBody.innerHTML += `<tr class="border-b border-gray-700 hover:bg-gray-700/50"><td class="p-3 text-white font-medium">${lanc.descricao}</td><td class="p-3 text-brand-subtle">${lanc.categoria}</td><td class="p-3 ${valorClass} font-bold text-right">${sinal} ${formatCurrency(lanc.valor)}</td><td class="p-3 text-center"><span class="${statusClass} text-xs font-bold px-2 py-1 rounded-full">${statusText}</span></td><td class="p-3 text-center text-brand-subtle">${formatDate(lanc.dataVencimento)}</td><td class="p-3 text-center">${anexoIcon}</td><td class="p-3 text-center space-x-4"><button onclick="openLancamentoModal(${lanc.id})" class="text-blue-400 hover:text-blue-300">Editar</button><button onclick="deleteLancamento(${lanc.id})" class="text-red-400 hover:text-red-300">Excluir</button></td></tr>`;
-            });
-        }
-        function openLancamentoModal(id = null) {
-            const form = document.getElementById('lancamentoForm');
-            form.reset();
-            document.getElementById('anexo-preview').textContent = '';
-            document.getElementById('lancamentoModalTitle').textContent = id ? 'Editar Lançamento' : 'Novo Lançamento';
-            populateAlunosLancamentoDropdown();
-            populateFuncionariosLancamentoDropdown();
-
-            if (id) {
-                const lancamento = getCurrentUnitData().lancamentos.find(l => l.id === id);
-                document.getElementById('lancamentoId').value = lancamento.id;
-                document.getElementById('tipo').value = lancamento.tipo;
-                document.getElementById('descricao').value = lancamento.descricao;
-                document.getElementById('categoria').value = lancamento.categoria;
-                document.getElementById('valor').value = lancamento.valor;
-                document.getElementById('vencimento').value = lancamento.dataVencimento;
-                document.getElementById('pagamento').value = lancamento.dataPagamento;
-                if(lancamento.id_aluno) document.getElementById('id_aluno_lancamento').value = lancamento.id_aluno;
-                if(lancamento.id_funcionario) document.getElementById('id_funcionario_lancamento').value = lancamento.id_funcionario;
-                if (lancamento.anexo) {
-                     document.getElementById('anexo-preview').innerHTML = `Anexo existente: <a href="${lancamento.anexo.data}" target="_blank" class="text-brand-secondary underline">${lancamento.anexo.name}</a>. Selecione um novo para substituir.`;
-                }
-            } else {
-                 document.getElementById('lancamentoId').value = '';
-            }
-            toggleCategoryOptions();
-            openModal('lancamentoModal');
-        }
-        function deleteLancamento(id) {
-            showConfirmModal('Excluir Lançamento', 'Tem certeza que deseja excluir este lançamento?', () => {
-                database[selectedUnit].lancamentos = getCurrentUnitData().lancamentos.filter(l => l.id !== id);
-                saveData();
-                renderAll();
-                showToast('Lançamento excluído com sucesso!', 'error');
-            });
-        }
-        document.getElementById('lancamentoForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const valorInput = document.getElementById('valor').value;
-            if (!valorInput || isNaN(parseFloat(valorInput)) || parseFloat(valorInput) <= 0) {
-                showToast("Por favor, insira um valor válido e maior que zero.", 'error');
-                return;
-            }
-            
-            const file = document.getElementById('anexo').files[0];
-            let anexoData = null;
-            if (file) anexoData = await readFileAsDataURL(file);
-
-            const id = document.getElementById('lancamentoId').value;
-            const lancamentos = getCurrentUnitData().lancamentos;
-            const lancamentoData = {
-                tipo: document.getElementById('tipo').value,
-                descricao: document.getElementById('descricao').value,
-                categoria: document.getElementById('categoria').value,
-                valor: parseFloat(valorInput),
-                dataPagamento: document.getElementById('pagamento').value || null,
-                dataVencimento: document.getElementById('vencimento').value,
-                id_aluno: document.getElementById('aluno-selector-container').style.display !== 'none' ? parseInt(document.getElementById('id_aluno_lancamento').value) || null : null,
-                id_funcionario: document.getElementById('funcionario-selector-container').style.display !== 'none' ? parseInt(document.getElementById('id_funcionario_lancamento').value) || null : null,
-            };
-            
-            if (id) {
-                const index = lancamentos.findIndex(l => l.id == id);
-                lancamentos[index] = { ...lancamentos[index], ...lancamentoData };
-                if(anexoData) lancamentos[index].anexo = anexoData;
-            } else {
-                lancamentoData.id = lancamentos.length > 0 ? Math.max(...lancamentos.map(l => l.id)) + 1 : 1;
-                lancamentoData.dataCriacao = new Date();
-                lancamentoData.anexo = anexoData;
-                lancamentos.push(lancamentoData);
-            }
-            
-            saveData();
-            renderAll();
-            closeModal('lancamentoModal');
-            this.reset();
-            toggleCategoryOptions();
-            showToast('Lançamento salvo com sucesso!');
+      // Top 5 despesas
+      const despesasGrouped = {};
+      state.lancamentos
+        .filter((l) => l.tipo === "DESPESA")
+        .forEach((l) => {
+          const cat = l.categoria || "Outras";
+          despesasGrouped[cat] = (despesasGrouped[cat] || 0) + Number(l.valor || 0);
         });
 
-        // --- DASHBOARD E GRÁFICOS ---
-        function updateDashboard() {
-            const unitData = getCurrentUnitData();
-            if (!unitData) return;
-            const receitaTotal = unitData.lancamentos.filter(l => l.tipo === 'RECEITA').reduce((acc, l) => acc + l.valor, 0);
-            const custoTotal = unitData.lancamentos.filter(l => l.tipo === 'DESPESA').reduce((acc, l) => acc + l.valor, 0);
-            const saldo = receitaTotal - custoTotal;
-            const totalAlunosAtivos = unitData.alunos.filter(a => a.status_aluno === 'Ativo').length;
+      const top = Object.entries(despesasGrouped)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
 
-            document.getElementById('kpi-receita').innerHTML = `<div class="flex justify-between items-start"><h3 class="text-lg font-semibold text-brand-subtle">Receita Bruta</h3><div class="p-2 bg-green-500/20 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 text-brand-primary"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div></div><p class="text-3xl font-bold text-white mt-2">${formatCurrency(receitaTotal)}</p>`;
-            document.getElementById('kpi-custo').innerHTML = `<div class="flex justify-between items-start"><h3 class="text-lg font-semibold text-brand-subtle">Custo Total</h3><div class="p-2 bg-red-500/20 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 text-brand-danger"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div></div><p class="text-3xl font-bold text-white mt-2">${formatCurrency(custoTotal)}</p>`;
-            document.getElementById('kpi-saldo').innerHTML = `<div class="flex justify-between items-start"><h3 class="text-lg font-semibold text-brand-subtle">Saldo</h3><div class="p-2 bg-blue-500/20 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 text-brand-secondary"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></div></div><p class="text-3xl font-bold text-white mt-2">${formatCurrency(saldo)}</p>`;
-            document.getElementById('kpi-alunos').innerHTML = `<div class="flex justify-between items-start"><h3 class="text-lg font-semibold text-brand-subtle">Alunos Ativos</h3><div class="p-2 bg-yellow-500/20 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 text-yellow-400"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div></div><p class="text-3xl font-bold text-white mt-2">${totalAlunosAtivos}</p>`;
-            document.getElementById('kpi-receita-aluno').textContent = formatCurrency(totalAlunosAtivos > 0 ? receitaTotal / totalAlunosAtivos : 0);
-            document.getElementById('kpi-custo-aluno').textContent = formatCurrency(totalAlunosAtivos > 0 ? custoTotal / totalAlunosAtivos : 0);
-            updateCharts(receitaTotal, custoTotal);
-        }
-        function updateCharts(receitaTotal, custoTotal) {
-            if (!revenueChart || !expensesChart) return;
-            revenueChart.data.datasets[0].data = [receitaTotal];
-            revenueChart.data.datasets[1].data = [custoTotal];
-            revenueChart.update();
-            const despesasAgrupadas = getCurrentUnitData().lancamentos.filter(l => l.tipo === 'DESPESA').reduce((acc, l) => { acc[l.categoria] = (acc[l.categoria] || 0) + l.valor; return acc; }, {});
-            const top5 = Object.entries(despesasAgrupadas).sort(([,a],[,b]) => b-a).slice(0, 5);
-            expensesChart.data.labels = top5.map(item => (item[0].split('. ')[1] || item[0]).substring(0, 15));
-            expensesChart.data.datasets[0].data = top5.map(item => item[1]);
-            expensesChart.update();
-        }
+      const ctx2 = document.getElementById("chart-despesas-top").getContext("2d");
+      if (chartTopDespesas) chartTopDespesas.destroy();
+      chartTopDespesas = new Chart(ctx2, {
+        type: "doughnut",
+        data: {
+          labels: top.map(([k]) => k),
+          datasets: [
+            {
+              data: top.map(([, v]) => v)
+            }
+          ]
+        },
+        options: { responsive: true }
+      });
+    }
 
-        // --- INICIALIZAÇÃO E EVENTOS ---
-        document.addEventListener('DOMContentLoaded', () => {
-            revenueChart = new Chart(document.getElementById('revenueChart').getContext('2d'), { type: 'bar', data: { labels: ['Mês Atual'], datasets: [{ label: 'Receita', data: [], backgroundColor: 'rgba(72, 187, 120, 0.6)' }, { label: 'Despesas', data: [], backgroundColor: 'rgba(245, 101, 101, 0.6)' }] }, options: { scales: { y: { beginAtZero: true, ticks: { color: '#a0aec0' }, grid: { color: 'rgba(160, 174, 192, 0.2)' } }, x: { ticks: { color: '#a0aec0' }, grid: { color: 'rgba(160, 174, 192, 0.2)' } } }, plugins: { legend: { labels: { color: '#e2e8f0' } } } } });
-            expensesChart = new Chart(document.getElementById('expensesChart').getContext('2d'), { type: 'doughnut', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#4299e1', '#48bb78', '#f56565', '#ed8936', '#ecc94b'], hoverOffset: 4 }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
-            
-            document.getElementById('tipo').addEventListener('change', toggleCategoryOptions);
-            document.getElementById('categoria').addEventListener('change', toggleCategoryOptions);
-            document.getElementById('id_funcionario_lancamento').addEventListener('change', (e) => {
-                const funcId = parseInt(e.target.value);
-                if (!funcId) return;
-                const func = getCurrentUnitData().funcionarios.find(f => f.id === funcId);
-                if(func) document.getElementById('valor').value = func.salario_base;
-            });
-            
-            populateUnitSelector();
-            document.getElementById('unit-selector').addEventListener('change', (e) => {
-                selectedUnit = e.target.value;
-                renderAll();
-            });
+    // =========================
+    // CRUD SIMPLES (PROMPT)
+    // (cria registro com autoria/horário)
+    // =========================
+    function getUnitRef() {
+      return db.collection("unidades").doc(selectedUnit);
+    }
 
-            setDefaultDates();
-            document.getElementById('report-start-date').addEventListener('change', renderReport);
-            document.getElementById('report-end-date').addEventListener('change', renderReport);
-            
-            loadData();
-            renderAll();
+    async function addPlanoPrompt() {
+      if (!currentUser) return alert("Faça login antes.");
+      const nome = prompt("Nome do plano:");
+      if (!nome) return;
+      const valorStr = prompt("Valor (R$):", "0");
+      const valor = Number(valorStr || "0");
+
+      await getUnitRef().collection("planos").add({
+        nome_plano: nome,
+        valor,
+        status_plano: "Ativo",
+        createdBy: currentUser.email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: currentUser.email,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert("Plano criado com sucesso.");
+    }
+
+    async function addAlunoPrompt() {
+      if (!currentUser) return alert("Faça login antes.");
+      const nome = prompt("Nome completo do aluno:");
+      if (!nome) return;
+      const email = prompt("Email do aluno:");
+      if (!email) return;
+
+      await getUnitRef().collection("alunos").add({
+        nome_completo: nome,
+        email,
+        status_aluno: "Ativo",
+        createdBy: currentUser.email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: currentUser.email,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert("Aluno criado com sucesso.");
+    }
+
+    async function addFuncionarioPrompt() {
+      if (!currentUser) return alert("Faça login antes.");
+      const nome = prompt("Nome do funcionário:");
+      if (!nome) return;
+      const cargo = prompt("Cargo:");
+      if (!cargo) return;
+      const salStr = prompt("Salário base (R$):", "0");
+      const salario = Number(salStr || "0");
+
+      await getUnitRef().collection("funcionarios").add({
+        nome,
+        cargo,
+        salario_base: salario,
+        status: "Ativo",
+        createdBy: currentUser.email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: currentUser.email,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert("Funcionário criado com sucesso.");
+    }
+
+    async function addLancamentoPrompt() {
+      if (!currentUser) return alert("Faça login antes.");
+      const tipo = (prompt("Tipo (DESPESA ou RECEITA):", "DESPESA") || "").toUpperCase();
+      if (!["DESPESA", "RECEITA"].includes(tipo)) return alert("Tipo inválido.");
+
+      const descricao = prompt("Descrição do lançamento:");
+      if (!descricao) return;
+      const categoria = prompt("Categoria:");
+      if (!categoria) return;
+
+      const valStr = prompt("Valor (R$):", "0");
+      const valor = Number(valStr || "0");
+      const venc = prompt("Data de vencimento (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
+      if (!venc) return;
+
+      await getUnitRef().collection("lancamentos").add({
+        tipo,
+        descricao,
+        categoria,
+        valor,
+        dataVencimento: venc,
+        dataPagamento: null,
+        createdBy: currentUser.email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: currentUser.email,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert("Lançamento criado com sucesso.");
+    }
+
+    // =========================
+    // ABAS
+    // =========================
+    function setupTabs() {
+      const tabButtons = document.querySelectorAll(".tab-btn");
+      const tabContents = document.querySelectorAll(".tab-content");
+
+      tabButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const tab = btn.getAttribute("data-tab");
+
+          tabButtons.forEach((b) => {
+            b.classList.remove("tab-active");
+            b.classList.add("tab-inactive");
+          });
+          btn.classList.remove("tab-inactive");
+          btn.classList.add("tab-active");
+
+          tabContents.forEach((section) => {
+            if (section.id === "tab-" + tab) section.classList.remove("hidden");
+            else section.classList.add("hidden");
+          });
         });
+      });
+    }
 
-        // --- MODAIS, ABAS E NOTIFICAÇÕES ---
-        function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
-        function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
-        ['lancamentoModal', 'analysisModal', 'alunoModal', 'funcionarioModal', 'planoModal', 'confirmModal'].forEach(id => {
-            const modal = document.getElementById(id);
-            if(modal) modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeModal(id)
-            });
-        });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ['lancamentoModal', 'analysisModal', 'alunoModal', 'funcionarioModal', 'planoModal', 'confirmModal'].forEach(closeModal); });
-        
-        function showConfirmModal(title, text, onConfirm) {
-            document.getElementById('confirmModalTitle').textContent = title;
-            document.getElementById('confirmModalText').textContent = text;
-            const confirmBtn = document.getElementById('confirmModalOk');
-            const cancelBtn = document.getElementById('confirmModalCancel');
-            
-            const newConfirmBtn = confirmBtn.cloneNode(true);
-            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    // =========================
+    // START
+    // =========================
+    document.addEventListener("DOMContentLoaded", () => {
+      initFirebase();
+      setupAuth();
+      setupTabs();
+      renderUnitsSelector();
 
-            newConfirmBtn.onclick = () => { onConfirm(); closeModal('confirmModal'); };
-            cancelBtn.onclick = () => closeModal('confirmModal');
-            openModal('confirmModal');
-        }
-
-        function changeTab(activeTab) {
-            ['visaoGeral', 'alunos', 'funcionarios', 'planos', 'lancamentos', 'relatorios'].forEach(tabId => {
-                const content = document.getElementById(`content-${tabId}`);
-                const tab = document.getElementById(`tab-${tabId}`);
-                const isActive = tabId === activeTab;
-                content.classList.toggle('hidden', !isActive);
-                tab.classList.toggle('active', isActive);
-                tab.classList.toggle('bg-brand-surface', !isActive);
-                tab.classList.toggle('hover:bg-gray-600', !isActive);
-            });
-        }
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => { toast.classList.add('show'); }, 10);
-            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => { toast.remove(); }, 300); }, 3000);
-        }
-
-        // --- LÓGICA INTELIGENTE DO FORMULÁRIO ---
-        function toggleCategoryOptions() {
-            const tipo = document.getElementById('tipo').value;
-            const categoriasSelect = document.getElementById('categoria');
-            const selectedOption = categoriasSelect.options[categoriasSelect.selectedIndex];
-            const suggestBtn = document.getElementById('suggestBtn');
-            const alunoSelector = document.getElementById('aluno-selector-container');
-            const funcionarioSelector = document.getElementById('funcionario-selector-container');
-            
-            let firstVisible = true;
-            for (const option of categoriasSelect.options) {
-                const isVisible = (option.dataset.type === tipo);
-                option.style.display = isVisible ? '' : 'none';
-                if (isVisible && firstVisible) {
-                    categoriasSelect.value = option.value;
-                    firstVisible = false;
-                }
-            }
-            suggestBtn.style.display = (tipo === 'DESPESA') ? 'flex' : 'none';
-            alunoSelector.style.display = (selectedOption.dataset.student === 'true') ? 'block' : 'none';
-            funcionarioSelector.style.display = (selectedOption.dataset.employee === 'true') ? 'block' : 'none';
-        }
-        function populateAlunosLancamentoDropdown() {
-            const select = document.getElementById('id_aluno_lancamento');
-            select.innerHTML = '<option value="">Selecione um aluno</option>';
-            getCurrentUnitData().alunos.filter(a => a.status_aluno === 'Ativo').forEach(aluno => {
-                select.innerHTML += `<option value="${aluno.id_aluno}">${aluno.nome_completo}</option>`;
-            });
-        }
-        function populateFuncionariosLancamentoDropdown() {
-            const select = document.getElementById('id_funcionario_lancamento');
-            select.innerHTML = '<option value="">Selecione um funcionário</option>';
-            getCurrentUnitData().funcionarios.filter(f => f.status === 'Ativo').forEach(func => {
-                select.innerHTML += `<option value="${func.id}">${func.nome}</option>`;
-            });
-        }
-
-        // --- RELATÓRIOS ---
-        function populateUnitSelector() {
-            const selector = document.getElementById('unit-selector');
-            units.forEach(unit => selector.innerHTML += `<option value="${unit}">${unit}</option>`);
-            selector.value = selectedUnit;
-        }
-        function setDefaultDates() {
-            const today = new Date();
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-            document.getElementById('report-start-date').value = firstDay;
-            document.getElementById('report-end-date').value = lastDay;
-            document.getElementById('student-report-start-date').value = firstDay;
-            document.getElementById('student-report-end-date').value = lastDay;
-        }
-        function getReportHtml() {
-            const startDate = document.getElementById('report-start-date').value;
-            const endDate = document.getElementById('report-end-date').value;
-            const unitData = getCurrentUnitData();
-            const filteredData = unitData.lancamentos.filter(l => l.dataVencimento >= startDate && l.dataVencimento <= endDate);
-            const activeStudents = unitData.alunos.filter(a => a.status_aluno === 'Ativo').length;
-            const receita = filteredData.filter(l => l.tipo === 'RECEITA').reduce((acc, l) => acc + l.valor, 0);
-            const despesas = filteredData.filter(l => l.tipo === 'DESPESA');
-            const custo = despesas.reduce((acc, l) => acc + l.valor, 0);
-            const saldo = receita - custo;
-            let despesasHtml = despesas.map(d => `<tr><td>${d.categoria}</td><td style="text-align:right;">${formatCurrency(d.valor)}</td></tr>`).join('');
-            
-            return `<h2>Relatório Financeiro</h2><p>${selectedUnit}</p><p><strong>Período:</strong> ${formatDate(startDate)} a ${formatDate(endDate)}</p><p><strong>Alunos Ativos:</strong> ${activeStudents}</p><hr>
-                    <table style="width: 50%;">
-                        <tr><td><strong>Receita Bruta:</strong></td><td style="text-align:right;">${formatCurrency(receita)}</td></tr>
-                        <tr><td><strong>Custo Total:</strong></td><td style="text-align:right;">${formatCurrency(custo)}</td></tr>
-                        <tr><td><strong>Saldo:</strong></td><td style="text-align:right;">${formatCurrency(saldo)}</td></tr>
-                    </table>
-                    <h3>Detalhamento de Despesas</h3>
-                    <table><thead><tr><th>Categoria</th><th style="text-align:right;">Valor</th></tr></thead><tbody>${despesasHtml || '<tr><td colspan="2">Nenhuma despesa no período.</td></tr>'}</tbody></table>`;
-        }
-        function renderReport() {
-            document.getElementById('report-preview').innerHTML = getReportHtml();
-        }
-        function imprimirRelatorio() {
-            const reportHtmlForPrint = getReportHtml();
-            const printWindow = window.open('', '', 'height=800,width=800');
-            printWindow.document.write('<html><head><title>Relatório Financeiro</title>');
-            printWindow.document.write('<style>body{font-family:sans-serif;color:black;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}hr{border-top:1px solid #ccc;}h2,h3,p,div{color:black !important;}</style>');
-            printWindow.document.write('</head><body>' + reportHtmlForPrint + '</body></html>');
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
-        }
-        function imprimirRelatorioAlunosAtivos() {
-            const startDate = new Date(document.getElementById('student-report-start-date').value + 'T00:00:00');
-            const endDate = new Date(document.getElementById('student-report-end-date').value + 'T23:59:59');
-
-            if (isNaN(startDate) || isNaN(endDate)) {
-                showToast("Por favor, selecione datas válidas.", "error"); return;
-            }
-
-            const alunosAtivosNoPeriodo = getCurrentUnitData().alunos.filter(aluno => {
-                return (aluno.plan_history || []).some(h => {
-                    const planoInicio = new Date(h.data_inicio + 'T00:00:00');
-                    const planoFim = new Date(h.data_fim + 'T23:59:59');
-                    return Math.max(startDate, planoInicio) <= Math.min(endDate, planoFim);
-                });
-            });
-
-            if (alunosAtivosNoPeriodo.length === 0) {
-                showToast("Nenhum aluno ativo encontrado no período selecionado.", "error"); return;
-            }
-
-            let alunosHtml = alunosAtivosNoPeriodo.map(aluno => `<tr><td>${aluno.nome_completo}</td><td>${aluno.email}</td><td>${aluno.telefone || '--'}</td></tr>`).join('');
-            const printWindow = window.open('', '', 'height=800,width=800');
-            printWindow.document.write('<html><head><title>Relatório de Alunos Ativos</title>');
-            printWindow.document.write('<style>body{font-family:sans-serif;color:black;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}h2,p{color:black !important;}</style>');
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(`<h2>Relatório de Alunos Ativos - ${selectedUnit}</h2>`);
-            printWindow.document.write(`<p><strong>Período:</strong> ${startDate.toLocaleDateString('pt-BR')} a ${endDate.toLocaleDateString('pt-BR')}</p>`);
-            printWindow.document.write(`<p><strong>Total de Alunos Ativos:</strong> ${alunosAtivosNoPeriodo.length}</p>`);
-            printWindow.document.write('<table><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th></tr></thead><tbody>' + alunosHtml + '</tbody></table>');
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
-        }
-
-        // --- API GEMINI ---
-        const apiKey = ""; // Insira sua chave da API do Google AI Studio aqui.
-        async function callGemini(prompt, retries = 3, delay = 1000) {
-            if (!apiKey) {
-                return "<h3>Recurso Indisponível</h3><p>A chave da API Gemini não foi configurada. Insira a chave na variável 'apiKey' no código para usar esta funcionalidade.</p>";
-            }
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-            try {
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                if (!response.ok) { if (response.status === 429 && retries > 0) { await new Promise(resolve => setTimeout(resolve, delay)); return callGemini(prompt, retries - 1, delay * 2); } throw new Error(`Erro na API: ${response.statusText}`); }
-                const data = await response.json(); return data.candidates[0].content.parts[0].text;
-            } catch (error) { if (retries > 0) { await new Promise(resolve => setTimeout(resolve, delay)); return callGemini(prompt, retries - 1, delay * 2); } console.error("Erro ao chamar a API Gemini:", error); return "<h3>Erro de Conexão</h3><p>Não foi possível obter uma resposta da IA. Verifique sua conexão ou tente novamente.</p>"; }
-        }
-        async function analisarDespesas() {
-             const analiseBtn = document.getElementById('analiseBtn'); const btnText = document.getElementById('analiseBtnText'); const spinner = document.getElementById('analiseSpinner'); const analysisResult = document.getElementById('analysisResult');
-             btnText.classList.add('hidden'); spinner.classList.remove('hidden'); analiseBtn.disabled = true;
-             analysisResult.innerHTML = '<div class="flex justify-center items-center"><div class="spinner"></div><p class="ml-4">Analisando despesas...</p></div>'; openModal('analysisModal');
-             
-             const despesas = getCurrentUnitData().lancamentos.filter(l => l.tipo === 'DESPESA');
-             if (despesas.length === 0) {
-                 analysisResult.innerHTML = "<h3>Sem Dados</h3><p>Não há despesas para analisar. Adicione alguns lançamentos primeiro.</p>";
-             } else {
-                 let dadosDespesas = "Descrição;Categoria;Valor\n" + despesas.map(l => `${l.descricao};${l.categoria};${l.valor}`).join("\n");
-                 const prompt = `Você é um consultor financeiro especialista em academias. Analise os seguintes dados de despesas de uma academia no Brasil. Forneça uma análise em bullet points (usando *) com insights acionáveis. Seu objetivo é: 1. Identificar as maiores áreas de gastos. 2. Sugerir pontos específicos onde pode haver oportunidade de economia. 3. Apontar qualquer despesa que pareça incomum. 4. Use um tom profissional, mas direto. Formate a resposta em HTML, usando <h3> para títulos e <ul> com <li> para os bullet points. Dados: ${dadosDespesas}`;
-                 const resultado = await callGemini(prompt); 
-                 analysisResult.innerHTML = resultado;
-             }
-
-             btnText.classList.remove('hidden'); spinner.classList.add('hidden'); analiseBtn.disabled = false;
-        }
-        async function sugerirCategoria() {
-            const suggestBtn = document.getElementById('suggestBtn'); const btnText = document.getElementById('suggestBtnText'); const spinner = document.getElementById('suggestSpinner');
-            const descricao = document.getElementById('descricao').value; if (descricao.length < 5) { showToast("Digite uma descrição mais detalhada.", 'error'); return; }
-            btnText.classList.add('hidden'); spinner.classList.remove('hidden'); suggestBtn.disabled = true;
-            
-            const selectCategoria = document.getElementById('categoria'); 
-            const categorias = Array.from(selectCategoria.options).filter(opt => opt.style.display !== 'none').map(opt => opt.text);
-            const prompt = `Com base na descrição de despesa a seguir, qual das seguintes categorias é a mais provável? Responda APENAS com o nome exato da categoria da lista, sem nenhuma palavra ou pontuação adicional. Descrição: "${descricao}" Categorias Disponíveis: ${categorias.join('\n')}`;
-            const categoriaSugerida = await callGemini(prompt);
-            
-            if (categoriaSugerida.includes("Recurso Indisponível") || categoriaSugerida.includes("Erro de Conexão")) {
-                showToast("IA indisponível. Verifique a chave da API.", "error");
-            } else {
-                const option = Array.from(selectCategoria.options).find(opt => opt.text.trim() === categoriaSugerida.trim()); 
-                if (option) { 
-                    selectCategoria.value = option.value; 
-                    showToast("Categoria sugerida pela IA!");
-                } else { 
-                    console.warn("IA sugeriu categoria não encontrada:", categoriaSugerida); 
-                    showToast("IA sugeriu uma categoria inválida.", "error");
-                }
-            }
-            btnText.classList.remove('hidden'); spinner.classList.add('hidden'); suggestBtn.disabled = false;
-        }
-
-        // --- DADOS INICIAIS (MOCK DATA) ---
-        function loadInitialData() {
-            units.forEach((unit) => {
-                const defaultPlans = [
-                    { id_plano: 1, nome_plano: 'Plano Mensal', descricao: 'Acesso completo por 30 dias.', valor: 119.90, duracao_meses: 1, status_plano: 'Ativo' },
-                    { id_plano: 2, nome_plano: 'Plano Trimestral', descricao: 'Acesso por 90 dias com desconto.', valor: 329.90, duracao_meses: 3, status_plano: 'Ativo' },
-                    { id_plano: 3, nome_plano: 'Plano Anual', descricao: 'O melhor custo-benefício.', valor: 1199.90, duracao_meses: 12, status_plano: 'Ativo' },
-                ];
-                database[unit] = {
-                    planos: JSON.parse(JSON.stringify(defaultPlans)),
-                    alunos: [],
-                    funcionarios: [],
-                    lancamentos: []
-                };
-            });
-            console.log("Banco de dados inicializado com dados mock.");
-            showToast("Bem-vindo! Dados de exemplo foram carregados.");
-        }
-    </script>
+      document.getElementById("btn-add-plano").addEventListener("click", addPlanoPrompt);
+      document.getElementById("btn-add-aluno").addEventListener("click", addAlunoPrompt);
+      document.getElementById("btn-add-funcionario").addEventListener("click", addFuncionarioPrompt);
+      document.getElementById("btn-add-lancamento").addEventListener("click", addLancamentoPrompt);
+    });
+  </script>
 </body>
 </html>
