@@ -38,8 +38,8 @@
 </head>
 <body class="min-h-screen">
 
-  <!-- TELA DE LOGIN / BLOQUEIO -->
-  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+  <!-- TELA DE LOGIN / BLOQUEIO (AGORA SEMPRE ESCONDIDA) -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 hidden">
     <div class="bg-[#2d3748] p-8 rounded-2xl max-w-md w-full shadow-xl text-center">
       <h1 class="text-2xl font-bold mb-4">SISTEMA DE GESTÃO BRABO v5.0</h1>
       <p class="text-sm text-gray-300 mb-6">
@@ -55,8 +55,8 @@
     </div>
   </div>
 
-  <!-- APP PRINCIPAL -->
-  <div id="app" class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto hidden">
+  <!-- APP PRINCIPAL (SEM "hidden") -->
+  <div id="app" class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
     <!-- Cabeçalho -->
     <header class="flex flex-wrap justify-between items-center gap-4 mb-6">
       <div>
@@ -273,7 +273,6 @@
     // CONFIGURAÇÃO FIREBASE
     // =========================
 
-    // TODO: 👉 TROCAR PELO SEU CONFIG DO FIREBASE
     const firebaseConfig = {
       apiKey: "AIzaSyBEId876zarlIjEKYUz7ejnLhLcstnsHY7Y",
       authDomain: "sistemadegestaobrabo.firebaseapp.com",
@@ -283,7 +282,7 @@
       appId: "1:1050063988219:web:d5a4b3d1305144840675e"
     };
 
-    // Emails autorizados
+    // pode ficar aqui para uso futuro com NextAuth
     const allowedEmails = [
       "thiagobrabobm@gmail.com",
       "marlucezanco02@gmail.com"
@@ -333,7 +332,7 @@
     };
 
     // =========================
-    // INICIALIZAÇÃO
+    // INICIALIZAÇÃO FIREBASE
     // =========================
     function initFirebase() {
       firebase.initializeApp(firebaseConfig);
@@ -342,55 +341,36 @@
       console.log("Firebase inicializado.");
     }
 
+    // =========================
+    // LOGIN SIMPLIFICADO (SEM POPUP GOOGLE AQUI)
+    // =========================
     function setupAuth() {
       const loginScreen = document.getElementById("login-screen");
       const appDiv = document.getElementById("app");
-      const loginError = document.getElementById("login-error");
       const userEmailSpan = document.getElementById("user-email");
 
-      document.getElementById("btn-login").addEventListener("click", () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch((err) => {
-          console.error(err);
-          loginError.textContent = "Erro ao fazer login.";
-          loginError.classList.remove("hidden");
+      // 👉 Aqui pulamos totalmente o login do Firebase.
+      // Quem já protege o acesso é o NextAuth (na página /dashboard).
+      // Por enquanto, fixamos o usuário como o Thiago.
+      currentUser = { email: "thiagobrabobm@gmail.com" };
+
+      if (userEmailSpan) {
+        userEmailSpan.textContent = currentUser.email;
+      }
+
+      if (loginScreen) loginScreen.classList.add("hidden");
+      if (appDiv) appDiv.classList.remove("hidden");
+
+      const logoutBtn = document.getElementById("btn-logout");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+          // Apenas recarrega o SGB dentro do iframe
+          window.location.reload();
         });
-      });
+      }
 
-      document.getElementById("btn-logout").addEventListener("click", () => {
-        auth.signOut();
-      });
-
-      auth.onAuthStateChanged((user) => {
-        if (!user) {
-          currentUser = null;
-          appDiv.classList.add("hidden");
-          loginScreen.classList.remove("hidden");
-          return;
-        }
-
-        const email = user.email?.toLowerCase() || "";
-        if (!allowedEmails.includes(email)) {
-          currentUser = null;
-          loginError.textContent =
-            "Este email não está autorizado. Use uma conta permitida.";
-          loginError.classList.remove("hidden");
-          appDiv.classList.add("hidden");
-          loginScreen.classList.remove("hidden");
-          auth.signOut();
-          return;
-        }
-
-        // Usuário OK
-        currentUser = user;
-        userEmailSpan.textContent = user.email;
-        loginError.classList.add("hidden");
-        loginScreen.classList.add("hidden");
-        appDiv.classList.remove("hidden");
-
-        // Carregar dados da unidade
-        listenUnit(selectedUnit);
-      });
+      // Começar a ouvir dados da unidade padrão
+      listenUnit(selectedUnit);
     }
 
     // =========================
@@ -668,7 +648,6 @@
 
     // =========================
     // CRUD SIMPLES (PROMPT)
-    // (cria registro com autoria/horário)
     // =========================
     function getUnitRef() {
       return db.collection("unidades").doc(selectedUnit);
