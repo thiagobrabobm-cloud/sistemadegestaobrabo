@@ -316,63 +316,81 @@
     let chartTopDespesas = null;
 
     // Formatação
-    const formatBRL = (v) => {
-      const n = Number(v || 0);
-      return n.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL"
-      });
-    };
+const fmtDate = (d) => {
+  if (!d) return "--";
+  const date = d instanceof Date ? d : new Date(d);
+  if (isNaN(date)) return "--";
 
-    const fmtDate = (d) => {
-      if (!d) return "--";
-      const date = (d instanceof Date) ? d : new Date(d);
-      if (isNaN(date)) return "--";
-      return date.toLocaleDateString("pt-BR");
-    };
+  // agora mostra data + hora (ex: 12/12/2025 15:47)
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+};
+// =========================
+// INICIALIZAÇÃO FIREBASE
+// =========================
+function initFirebase() {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  auth = firebase.auth();
+  console.log("Firebase inicializado.");
+}
 
-    // =========================
-    // INICIALIZAÇÃO FIREBASE
-    // =========================
-    function initFirebase() {
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.firestore();
-      auth = firebase.auth();
-      console.log("Firebase inicializado.");
-    }
+// =========================
+// AUXILIAR: PEGA EMAIL DA URL (?userEmail=...)
+// =========================
+function getUserEmailFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const emailParam = params.get("userEmail");
 
-    // =========================
-    // LOGIN SIMPLIFICADO (SEM POPUP GOOGLE AQUI)
-    // =========================
-    function setupAuth() {
-      const loginScreen = document.getElementById("login-screen");
-      const appDiv = document.getElementById("app");
-      const userEmailSpan = document.getElementById("user-email");
+  if (!emailParam) return null;
 
-      // 👉 Aqui pulamos totalmente o login do Firebase.
-      // Quem já protege o acesso é o NextAuth (na página /dashboard).
-      // Por enquanto, fixamos o usuário como o Thiago.
-      currentUser = { email: "thiagobrabobm@gmail.com" };
+  try {
+    return decodeURIComponent(emailParam);
+  } catch (err) {
+    console.error("Erro ao decodificar email da URL:", err);
+    return emailParam;
+  }
+}
 
-      if (userEmailSpan) {
-        userEmailSpan.textContent = currentUser.email;
-      }
+// =========================
+// LOGIN (USANDO EMAIL DO NEXTAUTH)
+// =========================
+function setupAuth() {
+  const loginScreen = document.getElementById("login-screen");
+  const appDiv = document.getElementById("app");
+  const userEmailSpan = document.getElementById("user-email");
 
-      if (loginScreen) loginScreen.classList.add("hidden");
-      if (appDiv) appDiv.classList.remove("hidden");
+  // pega o email enviado pelo NextAuth na URL
+  const emailFromUrl = getUserEmailFromUrl();
 
-      const logoutBtn = document.getElementById("btn-logout");
-      if (logoutBtn) {
-        logoutBtn.addEventListener("click", () => {
-          // Apenas recarrega o SGB dentro do iframe
-          window.location.reload();
-        });
-      }
+  // se não vier nada na URL, usa o seu email como segurança
+  currentUser = {
+    email: emailFromUrl || "thiagobrabobm@gmail.com",
+  };
 
-      // Começar a ouvir dados da unidade padrão
-      listenUnit(selectedUnit);
-    }
+  if (userEmailSpan) {
+    userEmailSpan.textContent = currentUser.email;
+  }
 
+  if (loginScreen) loginScreen.classList.add("hidden");
+  if (appDiv) appDiv.classList.remove("hidden");
+
+  const logoutBtn = document.getElementById("btn-logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      // aqui só recarrega o iframe; o logout de verdade é pelo botão Sair do NextAuth
+      window.location.reload();
+    });
+  }
+
+  // Começar a ouvir dados da unidade padrão
+  listenUnit(selectedUnit);
+}
     // =========================
     // LISTEN FIRESTORE
     // =========================
