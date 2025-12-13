@@ -45,13 +45,7 @@
       <p class="text-sm text-gray-300 mb-6">
         Faça login com sua conta do Google autorizada para acessar o sistema.
       </p>
-      <button
-        id="btn-login"
-        class="w-full bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-3 rounded-lg mb-3"
-      >
-        Entrar com Google
-      </button>
-      <p id="login-error" class="text-sm text-red-300 mt-2 hidden"></p>
+           <p id="login-error" class="text-sm text-red-300 mt-2 hidden"></p>
     </div>
   </div>
 
@@ -365,13 +359,23 @@ function setupAuth() {
   const appDiv = document.getElementById("app");
   const userEmailSpan = document.getElementById("user-email");
 
-  // pega o email enviado pelo NextAuth na URL
+    // pega o email enviado pelo NextAuth na URL
   const emailFromUrl = getUserEmailFromUrl();
 
-  // se não vier nada na URL, usa o seu email como segurança
+  // se NÃO tiver email, não deixa continuar (isso é erro de fluxo)
+  if (!emailFromUrl) {
+    alert(
+      "Erro: não foi possível identificar o usuário logado. " +
+      "Saia do sistema e faça login novamente."
+    );
+    return;
+  }
+
+  // daqui pra baixo temos certeza que é um usuário autorizado pelo NextAuth
   currentUser = {
-    email: emailFromUrl || "thiagobrabobm@gmail.com",
+    email: emailFromUrl,
   };
+
 
   if (userEmailSpan) {
     userEmailSpan.textContent = currentUser.email;
