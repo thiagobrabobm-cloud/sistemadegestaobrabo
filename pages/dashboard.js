@@ -1,7 +1,7 @@
 // pages/dashboard.js
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -14,6 +14,13 @@ export default function Dashboard() {
       router.replace("/");
     }
   }, [session, status, router]);
+
+  // Monta a URL do iframe já com o e-mail do NextAuth
+  const iframeSrc = useMemo(() => {
+    const email = encodeURIComponent(session?.user?.email || "");
+    // v=... ajuda a “forçar” atualizar quando a Vercel/browser estiver cacheando
+    return `/sgb.html?v=5.0.1&userEmail=${email}`;
+  }, [session?.user?.email]);
 
   // Enquanto carrega a sessão ou redireciona
   if (status === "loading" || !session) {
@@ -95,7 +102,7 @@ export default function Dashboard() {
       {/* Conteúdo: o seu sistema v5.0 em sgb.html */}
       <main style={{ flex: 1 }}>
         <iframe
-          src="/sgb.html"
+          src={iframeSrc}
           title="Sistema de Gestão Brabo"
           style={{
             width: "100%",

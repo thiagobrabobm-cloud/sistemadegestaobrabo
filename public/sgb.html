@@ -334,59 +334,56 @@ function initFirebase() {
 // AUXILIAR: PEGA EMAIL DA URL (?userEmail=...)
 // =========================
 function getUserEmailFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const emailParam = params.get("userEmail");
-
-  if (!emailParam) return null;
-
   try {
-    return decodeURIComponent(emailParam);
+    const params = new URLSearchParams(window.location.search || "");
+    const email = params.get("userEmail"); // 👈 MESMO NOME DA DASHBOARD
+    if (!email) {
+      console.warn("[SGB] Nenhum userEmail encontrado na URL:", window.location.href);
+      return null;
+    }
+    return email;
   } catch (err) {
-    console.error("Erro ao decodificar email da URL:", err);
-    return emailParam;
+    console.error("[SGB] Erro ao ler userEmail da URL", err);
+    return null;
   }
 }
 
 // =========================
 // LOGIN (USANDO EMAIL DO NEXTAUTH)
 // =========================
+// ========================
+// LOGIN (USANDO EMAIL DO NEXTAUTH)
+// ========================
 function setupAuth() {
   const loginScreen = document.getElementById("login-screen");
   const appDiv = document.getElementById("app");
   const userEmailSpan = document.getElementById("user-email");
 
-    // pega o email enviado pelo NextAuth na URL
+  // pega o email enviado pelo NextAuth na URL (?userEmail=...)
   const emailFromUrl = getUserEmailFromUrl();
 
-  // se NÃO tiver email, não deixa continuar (isso é erro de fluxo)
-  if (!emailFromUrl) {
-    alert(
-      "Erro: não foi possível identificar o usuário logado. " +
-      "Saia do sistema e faça login novamente."
-    );
-    return;
-  }
-
-  // daqui pra baixo temos certeza que é um usuário autorizado pelo NextAuth
+  // define o usuário atual com o email que veio da URL
   currentUser = {
     email: emailFromUrl,
   };
 
-
+  // só para conferência interna (mesmo oculto)
   if (userEmailSpan) {
-    userEmailSpan.textContent = currentUser.email;
+    userEmailSpan.textContent = currentUser.email || "";
   }
 
+  // esconde a tela de login do HTML e mostra o app
   if (loginScreen) loginScreen.classList.add("hidden");
   if (appDiv) appDiv.classList.remove("hidden");
 
+  // botão Sair de dentro do SGB (apenas recarrega o iframe)
   const logoutBtn = document.getElementById("btn-logout");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-      // aqui só recarrega o iframe; o logout de verdade é pelo botão Sair do NextAuth
       window.location.reload();
     });
   }
+}
 
   // Começar a ouvir dados da unidade padrão
   listenUnit(selectedUnit);
