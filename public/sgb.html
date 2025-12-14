@@ -38,39 +38,39 @@
 </head>
 <body class="min-h-screen">
 
-  <!-- TELA DE LOGIN / BLOQUEIO (AGORA SEMPRE ESCONDIDA) -->
+  <!-- TELA DE LOGIN / BLOQUEIO -->
   <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 hidden">
     <div class="bg-[#2d3748] p-8 rounded-2xl max-w-md w-full shadow-xl text-center">
       <h1 class="text-2xl font-bold mb-4">SISTEMA DE GESTÃO BRABO v5.0</h1>
       <p class="text-sm text-gray-300 mb-6">
         Faça login com sua conta do Google autorizada para acessar o sistema.
       </p>
-           <p id="login-error" class="text-sm text-red-300 mt-2 hidden"></p>
+      <p id="login-error" class="text-sm text-red-300 mt-2 hidden"></p>
     </div>
   </div>
 
-  <!-- APP PRINCIPAL (SEM "hidden") -->
-  <div id="app" class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+  <!-- APP PRINCIPAL -->
+  <div id="app" class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto hidden">
     <!-- Cabeçalho -->
-<header class="flex flex-wrap justify-between items-center gap-4 mb-6">
-  <div>
-    <h1 class="text-3xl sm:text-4xl font-extrabold text-white">
-      SISTEMA DE GESTÃO BRABO v5.0
-    </h1>
-    <div class="mt-2 flex items-center gap-3">
-      <label class="text-sm text-gray-300">Unidade:</label>
-      <select
-        id="unit-selector"
-        class="bg-[#2d3748] border border-gray-600 text-white text-sm rounded-lg p-2"
-      ></select>
-    </div>
-  </div>
+    <header class="flex flex-wrap justify-between items-center gap-4 mb-6">
+      <div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-white">
+          SISTEMA DE GESTÃO BRABO v5.0
+        </h1>
+        <div class="mt-2 flex items-center gap-3">
+          <label class="text-sm text-gray-300">Unidade:</label>
+          <select
+            id="unit-selector"
+            class="bg-[#2d3748] border border-gray-600 text-white text-sm rounded-lg p-2"
+          ></select>
+        </div>
+      </div>
 
-  <!-- Bloco interno de usuário oculto (usado só pelo JS) -->
-  <div class="hidden">
-    <span id="user-email"></span>
-  </div>
-</header>
+      <!-- Bloco interno de usuário oculto (usado só pelo JS) -->
+      <div class="hidden">
+        <span id="user-email"></span>
+      </div>
+    </header>
 
     <!-- Abas -->
     <nav class="flex flex-wrap gap-2 mb-6">
@@ -257,12 +257,10 @@
     </main>
   </div>
 
-  <!-- SCRIPT PRINCIPAL -->
   <script>
     // =========================
     // CONFIGURAÇÃO FIREBASE
     // =========================
-
     const firebaseConfig = {
       apiKey: "AIzaSyBEId876zarlIjEKYUz7ejnLhLcstnsHY7Y",
       authDomain: "sistemadegestaobrabo.firebaseapp.com",
@@ -272,13 +270,11 @@
       appId: "1:1050063988219:web:d5a4b3d1305144840675e"
     };
 
-    // pode ficar aqui para uso futuro com NextAuth
     const allowedEmails = [
       "thiagobrabobm@gmail.com",
       "marlucezanco02@gmail.com"
     ];
 
-    // Unidades
     const UNITS = [
       "Academia Zanco - Cordovil",
       "Academia Zanco - Irajá 1",
@@ -288,7 +284,6 @@
       "Academia Zanco - Caxias"
     ];
 
-    // Estado global em memória
     let currentUser = null;
     let selectedUnit = UNITS[0];
     let db, auth;
@@ -301,98 +296,108 @@
       lancamentos: []
     };
 
-    // Charts
     let chartReceitaDespesa = null;
     let chartTopDespesas = null;
 
-    // Formatação
-const fmtDate = (d) => {
-  if (!d) return "--";
-  const date = d instanceof Date ? d : new Date(d);
-  if (isNaN(date)) return "--";
-
-  // agora mostra data + hora (ex: 12/12/2025 15:47)
-  return date.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-};
-// =========================
-// INICIALIZAÇÃO FIREBASE
-// =========================
-function initFirebase() {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  auth = firebase.auth();
-  console.log("Firebase inicializado.");
-}
-
-// =========================
-// AUXILIAR: PEGA EMAIL DA URL (?userEmail=...)
-// =========================
-function getUserEmailFromUrl() {
-  try {
-    const params = new URLSearchParams(window.location.search || "");
-    const email = params.get("userEmail"); // 👈 MESMO NOME DA DASHBOARD
-    if (!email) {
-      console.warn("[SGB] Nenhum userEmail encontrado na URL:", window.location.href);
-      return null;
+    // =========================
+    // UTIL
+    // =========================
+    function formatBRL(value) {
+      const n = Number(value || 0);
+      return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     }
-    return email;
-  } catch (err) {
-    console.error("[SGB] Erro ao ler userEmail da URL", err);
-    return null;
-  }
-}
 
-// =========================
-// LOGIN (USANDO EMAIL DO NEXTAUTH)
-// =========================
-// ========================
-// LOGIN (USANDO EMAIL DO NEXTAUTH)
-// ========================
-function setupAuth() {
-  const loginScreen = document.getElementById("login-screen");
-  const appDiv = document.getElementById("app");
-  const userEmailSpan = document.getElementById("user-email");
+    const fmtDate = (d) => {
+      if (!d) return "--";
+      const date = d instanceof Date ? d : new Date(d);
+      if (isNaN(date)) return "--";
+      return date.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    };
 
-  // pega o email enviado pelo NextAuth na URL (?userEmail=...)
-  const emailFromUrl = getUserEmailFromUrl();
+    function showBlocked(message) {
+      const loginScreen = document.getElementById("login-screen");
+      const appDiv = document.getElementById("app");
+      const err = document.getElementById("login-error");
 
-  // define o usuário atual com o email que veio da URL
-  currentUser = {
-    email: emailFromUrl,
-  };
+      if (appDiv) appDiv.classList.add("hidden");
+      if (loginScreen) loginScreen.classList.remove("hidden");
 
-  // só para conferência interna (mesmo oculto)
-  if (userEmailSpan) {
-    userEmailSpan.textContent = currentUser.email || "";
-  }
+      if (err) {
+        err.textContent = message;
+        err.classList.remove("hidden");
+      }
+    }
 
-  // esconde a tela de login do HTML e mostra o app
-  if (loginScreen) loginScreen.classList.add("hidden");
-  if (appDiv) appDiv.classList.remove("hidden");
+    // =========================
+    // FIREBASE INIT
+    // =========================
+    function initFirebase() {
+      try {
+        if (!firebase.apps || firebase.apps.length === 0) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.firestore();
+        auth = firebase.auth();
+      } catch (e) {
+        console.error("[SGB] Falha ao inicializar Firebase:", e);
+        showBlocked("Erro ao inicializar o Firebase. Verifique o console.");
+      }
+    }
 
-  // botão Sair de dentro do SGB (apenas recarrega o iframe)
-  const logoutBtn = document.getElementById("btn-logout");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      window.location.reload();
-    });
-  }
-}
+    // =========================
+    // EMAIL DA URL
+    // =========================
+    function getUserEmailFromUrl() {
+      try {
+        const params = new URLSearchParams(window.location.search || "");
+        const email = params.get("userEmail");
+        return email ? email.trim().toLowerCase() : null;
+      } catch (err) {
+        console.error("[SGB] Erro ao ler userEmail da URL:", err);
+        return null;
+      }
+    }
 
-  // Começar a ouvir dados da unidade padrão
-  listenUnit(selectedUnit);
-}
+    // =========================
+    // AUTH (VIA NEXTAUTH -> query param)
+    // =========================
+    function setupAuth() {
+      const emailFromUrl = getUserEmailFromUrl();
+
+      if (!emailFromUrl) {
+        showBlocked("Erro: não foi possível identificar o usuário logado. Saia e faça login novamente.");
+        return false;
+      }
+
+      if (!allowedEmails.includes(emailFromUrl)) {
+        showBlocked("Acesso negado: este e-mail não está autorizado para usar o sistema.");
+        return false;
+      }
+
+      currentUser = { email: emailFromUrl };
+
+      const userEmailSpan = document.getElementById("user-email");
+      if (userEmailSpan) userEmailSpan.textContent = currentUser.email;
+
+      // libera o app
+      const loginScreen = document.getElementById("login-screen");
+      const appDiv = document.getElementById("app");
+      if (loginScreen) loginScreen.classList.add("hidden");
+      if (appDiv) appDiv.classList.remove("hidden");
+
+      return true;
+    }
+
     // =========================
     // LISTEN FIRESTORE
     // =========================
     function listenUnit(unitId) {
-      // Cancelar listeners antigos
       unsubscribers.forEach((u) => u && u());
       unsubscribers = [];
 
@@ -405,50 +410,32 @@ function setupAuth() {
 
       const unitRef = db.collection("unidades").doc(unitId);
 
-      // Planos
       unsubscribers.push(
         unitRef.collection("planos").onSnapshot((snap) => {
-          state.planos = snap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          state.planos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           renderPlanos();
-          updateKPIsAndCharts();
         })
       );
 
-      // Alunos
       unsubscribers.push(
         unitRef.collection("alunos").onSnapshot((snap) => {
-          state.alunos = snap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          state.alunos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           renderAlunos();
         })
       );
 
-      // Funcionários
       unsubscribers.push(
         unitRef.collection("funcionarios").onSnapshot((snap) => {
-          state.funcionarios = snap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          state.funcionarios = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           renderFuncionarios();
         })
       );
 
-      // Lançamentos
       unsubscribers.push(
-        unitRef
-          .collection("lancamentos")
+        unitRef.collection("lancamentos")
           .orderBy("dataVencimento", "desc")
           .onSnapshot((snap) => {
-            state.lancamentos = snap.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data()
-            }));
+            state.lancamentos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
             renderLancamentos();
             updateKPIsAndCharts();
           })
@@ -456,10 +443,12 @@ function setupAuth() {
     }
 
     // =========================
-    // RENDERIZAÇÃO UI
+    // UI
     // =========================
     function renderUnitsSelector() {
       const sel = document.getElementById("unit-selector");
+      if (!sel) return;
+
       sel.innerHTML = "";
       UNITS.forEach((u) => {
         const opt = document.createElement("option");
@@ -468,6 +457,7 @@ function setupAuth() {
         if (u === selectedUnit) opt.selected = true;
         sel.appendChild(opt);
       });
+
       sel.addEventListener("change", (e) => {
         selectedUnit = e.target.value;
         listenUnit(selectedUnit);
@@ -476,28 +466,23 @@ function setupAuth() {
 
     function renderAlunos() {
       const tbody = document.getElementById("table-alunos");
+      if (!tbody) return;
+
       tbody.innerHTML = "";
       if (state.alunos.length === 0) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 4;
-        td.className = "p-2 text-gray-400";
-        td.textContent = "Nenhum aluno cadastrado.";
-        tr.appendChild(td);
-        tbody.appendChild(tr);
+        tbody.innerHTML = `<tr><td colspan="4" class="p-2 text-gray-400">Nenhum aluno cadastrado.</td></tr>`;
         return;
       }
 
       state.alunos.forEach((a) => {
+        const createdAt = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) : null;
         const tr = document.createElement("tr");
         tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
         tr.innerHTML = `
           <td class="p-2">${a.nome_completo || "--"}</td>
           <td class="p-2">${a.email || "--"}</td>
           <td class="p-2">${a.status_aluno || "Ativo"}</td>
-          <td class="p-2 text-xs text-gray-300">${a.createdBy || "--"} ${
-          a.createdAt ? "(" + fmtDate(a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) + ")" : ""
-        }</td>
+          <td class="p-2 text-xs text-gray-300">${a.createdBy || "--"} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -505,28 +490,23 @@ function setupAuth() {
 
     function renderFuncionarios() {
       const tbody = document.getElementById("table-funcionarios");
+      if (!tbody) return;
+
       tbody.innerHTML = "";
       if (state.funcionarios.length === 0) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 4;
-        td.className = "p-2 text-gray-400";
-        td.textContent = "Nenhum funcionário cadastrado.";
-        tr.appendChild(td);
-        tbody.appendChild(tr);
+        tbody.innerHTML = `<tr><td colspan="4" class="p-2 text-gray-400">Nenhum funcionário cadastrado.</td></tr>`;
         return;
       }
 
       state.funcionarios.forEach((f) => {
+        const createdAt = f.createdAt ? (f.createdAt.toDate ? f.createdAt.toDate() : f.createdAt) : null;
         const tr = document.createElement("tr");
         tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
         tr.innerHTML = `
           <td class="p-2">${f.nome || "--"}</td>
           <td class="p-2">${f.cargo || "--"}</td>
           <td class="p-2 text-right">${formatBRL(f.salario_base)}</td>
-          <td class="p-2 text-xs text-gray-300">${f.createdBy || "--"} ${
-          f.createdAt ? "(" + fmtDate(f.createdAt.toDate ? f.createdAt.toDate() : f.createdAt) + ")" : ""
-        }</td>
+          <td class="p-2 text-xs text-gray-300">${f.createdBy || "--"} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -534,28 +514,23 @@ function setupAuth() {
 
     function renderPlanos() {
       const tbody = document.getElementById("table-planos");
+      if (!tbody) return;
+
       tbody.innerHTML = "";
       if (state.planos.length === 0) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 4;
-        td.className = "p-2 text-gray-400";
-        td.textContent = "Nenhum plano cadastrado.";
-        tr.appendChild(td);
-        tbody.appendChild(tr);
+        tbody.innerHTML = `<tr><td colspan="4" class="p-2 text-gray-400">Nenhum plano cadastrado.</td></tr>`;
         return;
       }
 
       state.planos.forEach((p) => {
+        const createdAt = p.createdAt ? (p.createdAt.toDate ? p.createdAt.toDate() : p.createdAt) : null;
         const tr = document.createElement("tr");
         tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
         tr.innerHTML = `
           <td class="p-2">${p.nome_plano || "--"}</td>
           <td class="p-2 text-right">${formatBRL(p.valor)}</td>
           <td class="p-2">${p.status_plano || "Ativo"}</td>
-          <td class="p-2 text-xs text-gray-300">${p.createdBy || "--"} ${
-          p.createdAt ? "(" + fmtDate(p.createdAt.toDate ? p.createdAt.toDate() : p.createdAt) + ")" : ""
-        }</td>
+          <td class="p-2 text-xs text-gray-300">${p.createdBy || "--"} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -563,76 +538,83 @@ function setupAuth() {
 
     function renderLancamentos() {
       const tbody = document.getElementById("table-lancamentos");
+      if (!tbody) return;
+
       tbody.innerHTML = "";
       if (state.lancamentos.length === 0) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 6;
-        td.className = "p-2 text-gray-400";
-        td.textContent = "Nenhum lançamento cadastrado.";
-        tr.appendChild(td);
-        tbody.appendChild(tr);
+        tbody.innerHTML = `<tr><td colspan="6" class="p-2 text-gray-400">Nenhum lançamento cadastrado.</td></tr>`;
         return;
       }
 
       state.lancamentos.forEach((l) => {
-        const tr = document.createElement("tr");
-        tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
+        const createdAt = l.createdAt ? (l.createdAt.toDate ? l.createdAt.toDate() : l.createdAt) : null;
+
         const valor = Number(l.valor || 0);
         const tipo = l.tipo || "DESPESA";
         const sinal = tipo === "DESPESA" ? "-" : "+";
         const valorClass = tipo === "DESPESA" ? "text-red-300" : "text-green-300";
 
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
         tr.innerHTML = `
           <td class="p-2">${l.descricao || "--"}</td>
           <td class="p-2">${l.categoria || "--"}</td>
           <td class="p-2">${tipo}</td>
           <td class="p-2 text-right ${valorClass}">${sinal} ${formatBRL(valor)}</td>
           <td class="p-2">${l.dataVencimento || "--"}</td>
-          <td class="p-2 text-xs text-gray-300">${l.createdBy || "--"} ${
-          l.createdAt ? "(" + fmtDate(l.createdAt.toDate ? l.createdAt.toDate() : l.createdAt) + ")" : ""
-        }</td>
+          <td class="p-2 text-xs text-gray-300">${l.createdBy || "--"} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}</td>
         `;
         tbody.appendChild(tr);
       });
     }
 
     // =========================
-    // KPIs & GRÁFICOS
+    // KPIs & CHARTS
     // =========================
     function updateKPIsAndCharts() {
       const receitaTotal = state.lancamentos
         .filter((l) => l.tipo === "RECEITA")
         .reduce((acc, l) => acc + Number(l.valor || 0), 0);
+
       const custoTotal = state.lancamentos
         .filter((l) => l.tipo === "DESPESA")
         .reduce((acc, l) => acc + Number(l.valor || 0), 0);
+
       const saldo = receitaTotal - custoTotal;
 
-      document.getElementById("kpi-receita").textContent = formatBRL(receitaTotal);
-      document.getElementById("kpi-custo").textContent = formatBRL(custoTotal);
-      document.getElementById("kpi-saldo").textContent = formatBRL(saldo);
+      const kpiReceita = document.getElementById("kpi-receita");
+      const kpiCusto = document.getElementById("kpi-custo");
+      const kpiSaldo = document.getElementById("kpi-saldo");
 
-      document.getElementById("rel-receita").textContent = formatBRL(receitaTotal);
-      document.getElementById("rel-custo").textContent = formatBRL(custoTotal);
-      document.getElementById("rel-saldo").textContent = formatBRL(saldo);
+      const relReceita = document.getElementById("rel-receita");
+      const relCusto = document.getElementById("rel-custo");
+      const relSaldo = document.getElementById("rel-saldo");
 
-      // Gráfico receita x despesa
-      const ctx1 = document.getElementById("chart-receita-despesa").getContext("2d");
-      if (chartReceitaDespesa) chartReceitaDespesa.destroy();
-      chartReceitaDespesa = new Chart(ctx1, {
-        type: "bar",
-        data: {
-          labels: ["Mês Atual"],
-          datasets: [
-            { label: "Receita", data: [receitaTotal], backgroundColor: "rgba(72, 187, 120, 0.7)" },
-            { label: "Despesas", data: [custoTotal], backgroundColor: "rgba(245, 101, 101, 0.7)" }
-          ]
-        },
-        options: { responsive: true }
-      });
+      if (kpiReceita) kpiReceita.textContent = formatBRL(receitaTotal);
+      if (kpiCusto) kpiCusto.textContent = formatBRL(custoTotal);
+      if (kpiSaldo) kpiSaldo.textContent = formatBRL(saldo);
 
-      // Top 5 despesas
+      if (relReceita) relReceita.textContent = formatBRL(receitaTotal);
+      if (relCusto) relCusto.textContent = formatBRL(custoTotal);
+      if (relSaldo) relSaldo.textContent = formatBRL(saldo);
+
+      const canvas1 = document.getElementById("chart-receita-despesa");
+      if (canvas1) {
+        const ctx1 = canvas1.getContext("2d");
+        if (chartReceitaDespesa) chartReceitaDespesa.destroy();
+        chartReceitaDespesa = new Chart(ctx1, {
+          type: "bar",
+          data: {
+            labels: ["Mês Atual"],
+            datasets: [
+              { label: "Receita", data: [receitaTotal], backgroundColor: "rgba(72, 187, 120, 0.7)" },
+              { label: "Despesas", data: [custoTotal], backgroundColor: "rgba(245, 101, 101, 0.7)" }
+            ]
+          },
+          options: { responsive: true }
+        });
+      }
+
       const despesasGrouped = {};
       state.lancamentos
         .filter((l) => l.tipo === "DESPESA")
@@ -645,31 +627,30 @@ function setupAuth() {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5);
 
-      const ctx2 = document.getElementById("chart-despesas-top").getContext("2d");
-      if (chartTopDespesas) chartTopDespesas.destroy();
-      chartTopDespesas = new Chart(ctx2, {
-        type: "doughnut",
-        data: {
-          labels: top.map(([k]) => k),
-          datasets: [
-            {
-              data: top.map(([, v]) => v)
-            }
-          ]
-        },
-        options: { responsive: true }
-      });
+      const canvas2 = document.getElementById("chart-despesas-top");
+      if (canvas2) {
+        const ctx2 = canvas2.getContext("2d");
+        if (chartTopDespesas) chartTopDespesas.destroy();
+        chartTopDespesas = new Chart(ctx2, {
+          type: "doughnut",
+          data: {
+            labels: top.map(([k]) => k),
+            datasets: [{ data: top.map(([, v]) => v) }]
+          },
+          options: { responsive: true }
+        });
+      }
     }
 
     // =========================
-    // CRUD SIMPLES (PROMPT)
+    // CRUD (PROMPT)
     // =========================
     function getUnitRef() {
       return db.collection("unidades").doc(selectedUnit);
     }
 
     async function addPlanoPrompt() {
-      if (!currentUser) return alert("Faça login antes.");
+      if (!currentUser?.email) return alert("Faça login antes.");
       const nome = prompt("Nome do plano:");
       if (!nome) return;
       const valorStr = prompt("Valor (R$):", "0");
@@ -688,7 +669,7 @@ function setupAuth() {
     }
 
     async function addAlunoPrompt() {
-      if (!currentUser) return alert("Faça login antes.");
+      if (!currentUser?.email) return alert("Faça login antes.");
       const nome = prompt("Nome completo do aluno:");
       if (!nome) return;
       const email = prompt("Email do aluno:");
@@ -707,7 +688,7 @@ function setupAuth() {
     }
 
     async function addFuncionarioPrompt() {
-      if (!currentUser) return alert("Faça login antes.");
+      if (!currentUser?.email) return alert("Faça login antes.");
       const nome = prompt("Nome do funcionário:");
       if (!nome) return;
       const cargo = prompt("Cargo:");
@@ -729,7 +710,7 @@ function setupAuth() {
     }
 
     async function addLancamentoPrompt() {
-      if (!currentUser) return alert("Faça login antes.");
+      if (!currentUser?.email) return alert("Faça login antes.");
       const tipo = (prompt("Tipo (DESPESA ou RECEITA):", "DESPESA") || "").toUpperCase();
       if (!["DESPESA", "RECEITA"].includes(tipo)) return alert("Tipo inválido.");
 
@@ -789,14 +770,18 @@ function setupAuth() {
     // =========================
     document.addEventListener("DOMContentLoaded", () => {
       initFirebase();
-      setupAuth();
+
+      const ok = setupAuth();
+      if (!ok) return; // bloqueia aqui se não tiver email/sem permissão
+
       setupTabs();
       renderUnitsSelector();
+      listenUnit(selectedUnit);
 
-      document.getElementById("btn-add-plano").addEventListener("click", addPlanoPrompt);
-      document.getElementById("btn-add-aluno").addEventListener("click", addAlunoPrompt);
-      document.getElementById("btn-add-funcionario").addEventListener("click", addFuncionarioPrompt);
-      document.getElementById("btn-add-lancamento").addEventListener("click", addLancamentoPrompt);
+      document.getElementById("btn-add-plano")?.addEventListener("click", addPlanoPrompt);
+      document.getElementById("btn-add-aluno")?.addEventListener("click", addAlunoPrompt);
+      document.getElementById("btn-add-funcionario")?.addEventListener("click", addFuncionarioPrompt);
+      document.getElementById("btn-add-lancamento")?.addEventListener("click", addLancamentoPrompt);
     });
   </script>
 </body>
