@@ -23,19 +23,12 @@
       color: #e2e8f0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    .tab-active {
-      background-color: #4299e1;
-      color: white;
-    }
-    .tab-inactive {
-      background-color: #2d3748;
-      color: #e2e8f0;
-    }
-    .tab-inactive:hover {
-      background-color: #4a5568;
-    }
+    .tab-active { background-color: #4299e1; color: white; }
+    .tab-inactive { background-color: #2d3748; color: #e2e8f0; }
+    .tab-inactive:hover { background-color: #4a5568; }
   </style>
 </head>
+
 <body class="min-h-screen">
 
   <!-- TELA DE LOGIN / BLOQUEIO -->
@@ -136,6 +129,7 @@
             Novo Aluno
           </button>
         </div>
+
         <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
           <table class="w-full text-left text-sm">
             <thead>
@@ -143,7 +137,9 @@
                 <th class="p-2">Nome</th>
                 <th class="p-2">Email</th>
                 <th class="p-2">Status</th>
+                <th class="p-2">Desde</th>
                 <th class="p-2">Criado por</th>
+                <th class="p-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody id="table-alunos"></tbody>
@@ -257,6 +253,201 @@
     </main>
   </div>
 
+  <!-- =========================
+       MODAL ALUNO (CRUD COMPLETO)
+       ========================= -->
+  <div id="modal-aluno" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
+    <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl">
+      <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
+        <div>
+          <h3 id="modal-aluno-title" class="text-lg font-bold text-white">Novo Aluno</h3>
+          <p class="text-xs text-gray-400">Os dados são salvos na unidade selecionada e atualizam em tempo real.</p>
+        </div>
+        <button id="btn-close-modal-aluno" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">
+          Fechar
+        </button>
+      </div>
+
+      <div class="p-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- FOTO 3x4 -->
+          <div class="lg:col-span-3">
+            <div class="bg-[#111827] border border-gray-700 rounded-xl p-3">
+              <div class="text-sm font-semibold mb-2">Foto (3x4)</div>
+
+              <div class="w-full aspect-[3/4] bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+                <img id="aluno-foto-preview" alt="Foto 3x4" class="w-full h-full object-cover hidden" />
+                <div id="aluno-foto-placeholder" class="text-xs text-gray-400 px-3 text-center">
+                  Sem foto. Use “Tirar” ou “Anexar”.
+                </div>
+              </div>
+
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button id="btn-foto-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">
+                  Tirar
+                </button>
+                <button id="btn-foto-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">
+                  Anexar
+                </button>
+                <button id="btn-foto-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">
+                  Remover
+                </button>
+              </div>
+
+              <p class="mt-2 text-[11px] text-gray-400">
+                Corte automático central (3:4). Se ficar ruim, tire novamente.
+              </p>
+
+              <!-- inputs ocultos -->
+              <input id="input-foto-camera" type="file" accept="image/*" capture="user" class="hidden" />
+              <input id="input-foto-file" type="file" accept="image/*" class="hidden" />
+            </div>
+          </div>
+
+          <!-- FORM -->
+          <div class="lg:col-span-9">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="text-sm text-gray-300">Nome completo *</label>
+                <input id="aluno-nome" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Nome do aluno" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Nascimento</label>
+                <input id="aluno-nascimento" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">CPF</label>
+                <input id="aluno-cpf" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Somente números ou com pontos/traço" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">E-mail</label>
+                <input id="aluno-email" type="email" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="email@dominio.com" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Telefone principal</label>
+                <input id="aluno-tel1" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="(21) 99999-9999" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Telefone secundário (emergência)</label>
+                <input id="aluno-tel2" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="(21) 99999-9999" />
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="text-sm text-gray-300">Endereço</label>
+                <input id="aluno-endereco" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Rua, número, bairro, cidade" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Status</label>
+                <select id="aluno-status" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
+                  <option value="Ativo">Ativo</option>
+                  <option value="Trancado">Trancado</option>
+                  <option value="Cancelado">Cancelado</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Desde quando é aluno</label>
+                <input id="aluno-desde" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
+                <p class="mt-1 text-[11px] text-gray-400">Se vazio, usa a data de criação.</p>
+              </div>
+            </div>
+
+            <!-- PLANO -->
+            <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-sm font-semibold">Plano</div>
+                  <div class="text-[11px] text-gray-400">Plano atual + histórico (datas de início/fim).</div>
+                </div>
+              </div>
+
+              <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label class="text-sm text-gray-300">Plano atual</label>
+                  <input id="plano-atual-nome" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Mensal, Trimestral..." />
+                </div>
+                <div>
+                  <label class="text-sm text-gray-300">Início</label>
+                  <input id="plano-atual-inicio" type="date" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" />
+                </div>
+                <div>
+                  <label class="text-sm text-gray-300">Fim</label>
+                  <input id="plano-atual-fim" type="date" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" />
+                </div>
+              </div>
+
+              <div class="mt-4 flex items-center justify-between">
+                <div class="text-sm font-semibold">Histórico de planos</div>
+                <button id="btn-add-hist" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">
+                  + Adicionar no histórico
+                </button>
+              </div>
+
+              <div id="hist-container" class="mt-3 space-y-2">
+                <!-- linhas do histórico entram aqui -->
+              </div>
+            </div>
+
+            <!-- DOCUMENTO -->
+            <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-sm font-semibold">Documento (foto)</div>
+                  <div class="text-[11px] text-gray-400">Para identidade/comprovante. (Imagem comprimida)</div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button id="btn-doc-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">
+                    Tirar
+                  </button>
+                  <button id="btn-doc-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">
+                    Anexar
+                  </button>
+                  <button id="btn-doc-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">
+                    Remover
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-3 flex items-start gap-3">
+                <div class="w-28 h-28 bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+                  <img id="aluno-doc-preview" alt="Documento" class="w-full h-full object-cover hidden" />
+                  <div id="aluno-doc-placeholder" class="text-[11px] text-gray-400 px-2 text-center">Sem documento</div>
+                </div>
+                <div class="text-xs text-gray-300">
+                  <div id="doc-info" class="text-gray-400">Nenhum documento anexado.</div>
+                  <button id="btn-doc-abrir" class="mt-2 px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold hidden">
+                    Abrir
+                  </button>
+                </div>
+
+                <input id="input-doc-camera" type="file" accept="image/*" capture="environment" class="hidden" />
+                <input id="input-doc-file" type="file" accept="image/*" class="hidden" />
+              </div>
+            </div>
+
+            <!-- ERRO -->
+            <p id="modal-aluno-error" class="mt-3 text-sm text-red-300 hidden"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 p-4 border-t border-gray-700 bg-[#0b1220] rounded-b-2xl">
+        <button id="btn-cancel-modal-aluno" class="px-4 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">
+          Cancelar
+        </button>
+        <button id="btn-save-aluno" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">
+          Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // =========================
     // CONFIGURAÇÃO FIREBASE
@@ -320,6 +511,13 @@
       });
     };
 
+    const fmtDateOnly = (d) => {
+      if (!d) return "--";
+      const date = d instanceof Date ? d : new Date(d);
+      if (isNaN(date)) return "--";
+      return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    };
+
     function showBlocked(message) {
       const loginScreen = document.getElementById("login-screen");
       const appDiv = document.getElementById("app");
@@ -332,6 +530,19 @@
         err.textContent = message;
         err.classList.remove("hidden");
       }
+    }
+
+    function showModalError(msg) {
+      const el = document.getElementById("modal-aluno-error");
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove("hidden");
+    }
+    function clearModalError() {
+      const el = document.getElementById("modal-aluno-error");
+      if (!el) return;
+      el.textContent = "";
+      el.classList.add("hidden");
     }
 
     // =========================
@@ -417,8 +628,9 @@
         })
       );
 
+      // Alunos (ordenado por createdAt desc)
       unsubscribers.push(
-        unitRef.collection("alunos").onSnapshot((snap) => {
+        unitRef.collection("alunos").orderBy("createdAt", "desc").onSnapshot((snap) => {
           state.alunos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           renderAlunos();
         })
@@ -470,20 +682,63 @@
 
       tbody.innerHTML = "";
       if (state.alunos.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-2 text-gray-400">Nenhum aluno cadastrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-2 text-gray-400">Nenhum aluno cadastrado.</td></tr>`;
         return;
       }
 
       state.alunos.forEach((a) => {
         const createdAt = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) : null;
+        const desde = a.desde ? new Date(a.desde) : createdAt;
+
         const tr = document.createElement("tr");
         tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
-        tr.innerHTML = `
-          <td class="p-2">${a.nome_completo || "--"}</td>
-          <td class="p-2">${a.email || "--"}</td>
-          <td class="p-2">${a.status_aluno || "Ativo"}</td>
-          <td class="p-2 text-xs text-gray-300">${a.createdBy || "--"} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}</td>
-        `;
+
+        const tdNome = document.createElement("td");
+        tdNome.className = "p-2";
+        tdNome.textContent = a.nome_completo || "--";
+
+        const tdEmail = document.createElement("td");
+        tdEmail.className = "p-2";
+        tdEmail.textContent = a.email || "--";
+
+        const tdStatus = document.createElement("td");
+        tdStatus.className = "p-2";
+        tdStatus.textContent = a.status_aluno || "Ativo";
+
+        const tdDesde = document.createElement("td");
+        tdDesde.className = "p-2";
+        tdDesde.textContent = desde ? fmtDateOnly(desde) : "--";
+
+        const tdCriado = document.createElement("td");
+        tdCriado.className = "p-2 text-xs text-gray-300";
+        tdCriado.textContent = `${a.createdBy || "--"} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}`;
+
+        const tdAcoes = document.createElement("td");
+        tdAcoes.className = "p-2 text-right";
+        const wrap = document.createElement("div");
+        wrap.className = "inline-flex gap-2";
+
+        const btnEdit = document.createElement("button");
+        btnEdit.className = "px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold";
+        btnEdit.textContent = "Editar";
+        btnEdit.addEventListener("click", () => openAlunoModal("edit", a));
+
+        const btnDel = document.createElement("button");
+        btnDel.className = "px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-xs font-semibold";
+        btnDel.textContent = "Excluir";
+        btnDel.addEventListener("click", () => deleteAluno(a));
+
+        wrap.appendChild(btnEdit);
+        wrap.appendChild(btnDel);
+        tdAcoes.appendChild(wrap);
+
+        tr.appendChild(tdNome);
+        tr.appendChild(tdEmail);
+        tr.appendChild(tdStatus);
+        tr.appendChild(tdDesde);
+        tr.appendChild(tdCriado);
+        tr.appendChild(tdAcoes);
+
         tbody.appendChild(tr);
       });
     }
@@ -643,7 +898,7 @@
     }
 
     // =========================
-    // CRUD (PROMPT)
+    // CRUD SIMPLES (OUTRAS ABAS)
     // =========================
     function getUnitRef() {
       return db.collection("unidades").doc(selectedUnit);
@@ -666,25 +921,6 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       alert("Plano criado com sucesso.");
-    }
-
-    async function addAlunoPrompt() {
-      if (!currentUser?.email) return alert("Faça login antes.");
-      const nome = prompt("Nome completo do aluno:");
-      if (!nome) return;
-      const email = prompt("Email do aluno:");
-      if (!email) return;
-
-      await getUnitRef().collection("alunos").add({
-        nome_completo: nome,
-        email,
-        status_aluno: "Ativo",
-        createdBy: currentUser.email,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedBy: currentUser.email,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      alert("Aluno criado com sucesso.");
     }
 
     async function addFuncionarioPrompt() {
@@ -740,6 +976,402 @@
     }
 
     // =========================
+    // ALUNOS - MODAL COMPLETO
+    // =========================
+    let alunoModalMode = "new";      // "new" | "edit"
+    let alunoEditingId = null;
+    let alunoFotoDataUrl = null;
+    let alunoDocDataUrl = null;
+    let histItems = []; // array de {nome, inicio, fim}
+
+    const LIMIT_PHOTO_MAX_SIDE = 480;   // foto 3x4 leve
+    const LIMIT_DOC_MAX_SIDE = 1280;    // documento legível, ainda leve
+    const MAX_DATAURL_CHARS = 850000;   // margem pra não estourar 1MB do Firestore
+
+    function openAlunoModal(mode, aluno = null) {
+      clearModalError();
+
+      alunoModalMode = mode;
+      alunoEditingId = aluno?.id || null;
+
+      document.getElementById("modal-aluno-title").textContent = mode === "edit" ? "Editar Aluno" : "Novo Aluno";
+
+      // reset
+      alunoFotoDataUrl = null;
+      alunoDocDataUrl = null;
+      histItems = [];
+
+      setFotoPreview(null);
+      setDocPreview(null);
+
+      // preencher campos
+      document.getElementById("aluno-nome").value = aluno?.nome_completo || "";
+      document.getElementById("aluno-nascimento").value = aluno?.nascimento || "";
+      document.getElementById("aluno-cpf").value = aluno?.cpf || "";
+      document.getElementById("aluno-endereco").value = aluno?.endereco || "";
+      document.getElementById("aluno-email").value = aluno?.email || "";
+      document.getElementById("aluno-tel1").value = aluno?.tel_principal || "";
+      document.getElementById("aluno-tel2").value = aluno?.tel_secundario || "";
+      document.getElementById("aluno-status").value = aluno?.status_aluno || "Ativo";
+      document.getElementById("aluno-desde").value = aluno?.desde || "";
+
+      // plano atual
+      document.getElementById("plano-atual-nome").value = aluno?.planoAtual?.nome || "";
+      document.getElementById("plano-atual-inicio").value = aluno?.planoAtual?.inicio || "";
+      document.getElementById("plano-atual-fim").value = aluno?.planoAtual?.fim || "";
+
+      // histórico
+      const incomingHist = Array.isArray(aluno?.planosHistorico) ? aluno.planosHistorico : [];
+      histItems = incomingHist.map(x => ({
+        nome: x?.nome || "",
+        inicio: x?.inicio || "",
+        fim: x?.fim || ""
+      }));
+      renderHist();
+
+      // foto/documento do firestore
+      if (aluno?.foto3x4 && typeof aluno.foto3x4 === "string") {
+        alunoFotoDataUrl = aluno.foto3x4;
+        setFotoPreview(alunoFotoDataUrl);
+      }
+      if (aluno?.docImagem && typeof aluno.docImagem === "string") {
+        alunoDocDataUrl = aluno.docImagem;
+        setDocPreview(alunoDocDataUrl);
+      }
+
+      const modal = document.getElementById("modal-aluno");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeAlunoModal() {
+      const modal = document.getElementById("modal-aluno");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function setFotoPreview(dataUrl) {
+      const img = document.getElementById("aluno-foto-preview");
+      const ph = document.getElementById("aluno-foto-placeholder");
+      if (!dataUrl) {
+        img.classList.add("hidden");
+        img.src = "";
+        ph.classList.remove("hidden");
+        return;
+      }
+      img.src = dataUrl;
+      img.classList.remove("hidden");
+      ph.classList.add("hidden");
+    }
+
+    function setDocPreview(dataUrl) {
+      const img = document.getElementById("aluno-doc-preview");
+      const ph = document.getElementById("aluno-doc-placeholder");
+      const info = document.getElementById("doc-info");
+      const btnAbrir = document.getElementById("btn-doc-abrir");
+
+      if (!dataUrl) {
+        img.classList.add("hidden");
+        img.src = "";
+        ph.classList.remove("hidden");
+        info.textContent = "Nenhum documento anexado.";
+        btnAbrir.classList.add("hidden");
+        return;
+      }
+
+      img.src = dataUrl;
+      img.classList.remove("hidden");
+      ph.classList.add("hidden");
+      info.textContent = "Documento anexado.";
+      btnAbrir.classList.remove("hidden");
+
+      btnAbrir.onclick = () => {
+        const w = window.open();
+        if (!w) return;
+        w.document.write(`<img src="${dataUrl}" style="max-width:100%;height:auto;" />`);
+      };
+    }
+
+    function renderHist() {
+      const box = document.getElementById("hist-container");
+      box.innerHTML = "";
+
+      if (histItems.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "text-xs text-gray-400";
+        empty.textContent = "Nenhum histórico adicionado.";
+        box.appendChild(empty);
+        return;
+      }
+
+      histItems.forEach((item, idx) => {
+        const row = document.createElement("div");
+        row.className = "grid grid-cols-1 md:grid-cols-12 gap-2 bg-[#0b1220] border border-gray-700 rounded-lg p-2";
+
+        const c1 = document.createElement("div");
+        c1.className = "md:col-span-6";
+        c1.innerHTML = `
+          <label class="text-[11px] text-gray-400">Plano</label>
+          <input data-hist="nome" data-idx="${idx}" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" placeholder="Nome do plano" value="${escapeHtml(item.nome)}" />
+        `;
+
+        const c2 = document.createElement("div");
+        c2.className = "md:col-span-2";
+        c2.innerHTML = `
+          <label class="text-[11px] text-gray-400">Início</label>
+          <input data-hist="inicio" data-idx="${idx}" type="date" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" value="${escapeAttr(item.inicio)}" />
+        `;
+
+        const c3 = document.createElement("div");
+        c3.className = "md:col-span-2";
+        c3.innerHTML = `
+          <label class="text-[11px] text-gray-400">Fim</label>
+          <input data-hist="fim" data-idx="${idx}" type="date" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" value="${escapeAttr(item.fim)}" />
+        `;
+
+        const c4 = document.createElement("div");
+        c4.className = "md:col-span-2 flex items-end justify-end";
+        const btn = document.createElement("button");
+        btn.className = "w-full md:w-auto px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold";
+        btn.textContent = "Remover";
+        btn.addEventListener("click", () => {
+          histItems.splice(idx, 1);
+          renderHist();
+        });
+        c4.appendChild(btn);
+
+        row.appendChild(c1);
+        row.appendChild(c2);
+        row.appendChild(c3);
+        row.appendChild(c4);
+
+        box.appendChild(row);
+      });
+
+      // bind inputs (delegado)
+      box.querySelectorAll("input[data-hist]").forEach((inp) => {
+        inp.addEventListener("input", (e) => {
+          const idx = Number(e.target.getAttribute("data-idx"));
+          const key = e.target.getAttribute("data-hist");
+          histItems[idx][key] = e.target.value;
+        });
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str || "").replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[m]));
+    }
+    function escapeAttr(str) {
+      return String(str || "").replace(/"/g, "&quot;");
+    }
+
+    async function saveAlunoFromModal() {
+      clearModalError();
+
+      if (!currentUser?.email) {
+        showModalError("Você não está logado.");
+        return;
+      }
+
+      const nome = document.getElementById("aluno-nome").value.trim();
+      if (!nome) {
+        showModalError("Nome completo é obrigatório.");
+        return;
+      }
+
+      const payload = {
+        nome_completo: nome,
+        nascimento: document.getElementById("aluno-nascimento").value || "",
+        cpf: document.getElementById("aluno-cpf").value.trim() || "",
+        endereco: document.getElementById("aluno-endereco").value.trim() || "",
+        email: (document.getElementById("aluno-email").value || "").trim(),
+        tel_principal: document.getElementById("aluno-tel1").value.trim() || "",
+        tel_secundario: document.getElementById("aluno-tel2").value.trim() || "",
+        status_aluno: document.getElementById("aluno-status").value || "Ativo",
+        desde: document.getElementById("aluno-desde").value || "",
+
+        planoAtual: {
+          nome: document.getElementById("plano-atual-nome").value.trim() || "",
+          inicio: document.getElementById("plano-atual-inicio").value || "",
+          fim: document.getElementById("plano-atual-fim").value || ""
+        },
+
+        planosHistorico: histItems
+          .map(x => ({ nome: (x.nome || "").trim(), inicio: x.inicio || "", fim: x.fim || "" }))
+          .filter(x => x.nome || x.inicio || x.fim),
+
+        // anexos
+        foto3x4: alunoFotoDataUrl || "",
+        docImagem: alunoDocDataUrl || ""
+      };
+
+      // proteção básica contra estourar tamanho
+      if ((payload.foto3x4 && payload.foto3x4.length > MAX_DATAURL_CHARS) ||
+          (payload.docImagem && payload.docImagem.length > MAX_DATAURL_CHARS)) {
+        showModalError("Imagem muito grande. Tente anexar novamente (ou use uma foto com menor resolução).");
+        return;
+      }
+
+      const col = getUnitRef().collection("alunos");
+
+      try {
+        if (alunoModalMode === "new") {
+          await col.add({
+            ...payload,
+            createdBy: currentUser.email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: currentUser.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } else {
+          if (!alunoEditingId) {
+            showModalError("Erro interno: alunoEditingId ausente.");
+            return;
+          }
+          await col.doc(alunoEditingId).update({
+            ...payload,
+            updatedBy: currentUser.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+
+        closeAlunoModal();
+      } catch (err) {
+        console.error("[SGB] Erro ao salvar aluno:", err);
+        showModalError("Erro ao salvar. Veja o console.");
+      }
+    }
+
+    async function deleteAluno(aluno) {
+      if (!currentUser?.email) return alert("Faça login antes.");
+      if (!aluno?.id) return;
+
+      const ok = confirm(`Excluir o aluno "${aluno.nome_completo || ""}"? Isso não pode ser desfeito.`);
+      if (!ok) return;
+
+      try {
+        await getUnitRef().collection("alunos").doc(aluno.id).delete();
+      } catch (err) {
+        console.error("[SGB] Erro ao excluir aluno:", err);
+        alert("Erro ao excluir. Veja o console.");
+      }
+    }
+
+    // ====== IMAGENS (foto 3x4 e documento)
+    function readFileAsImage(file) {
+      return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = fr.result;
+        };
+        fr.onerror = reject;
+        fr.readAsDataURL(file);
+      });
+    }
+
+    function canvasToJpegDataUrl(canvas, quality = 0.85) {
+      return canvas.toDataURL("image/jpeg", quality);
+    }
+
+    function centerCropToRatio(img, targetW, targetH, ratioW, ratioH) {
+      // crop central mantendo ratioW:ratioH
+      const srcW = img.naturalWidth;
+      const srcH = img.naturalHeight;
+
+      const targetRatio = ratioW / ratioH;
+      const srcRatio = srcW / srcH;
+
+      let cropW, cropH;
+      if (srcRatio > targetRatio) {
+        // imagem muito larga
+        cropH = srcH;
+        cropW = Math.floor(srcH * targetRatio);
+      } else {
+        // imagem muito alta
+        cropW = srcW;
+        cropH = Math.floor(srcW / targetRatio);
+      }
+
+      const sx = Math.floor((srcW - cropW) / 2);
+      const sy = Math.floor((srcH - cropH) / 2);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, targetW, targetH);
+
+      return canvas;
+    }
+
+    function resizeKeepAspect(img, maxSide) {
+      const srcW = img.naturalWidth;
+      const srcH = img.naturalHeight;
+
+      let outW = srcW;
+      let outH = srcH;
+
+      const maxSrc = Math.max(srcW, srcH);
+      if (maxSrc > maxSide) {
+        const scale = maxSide / maxSrc;
+        outW = Math.round(srcW * scale);
+        outH = Math.round(srcH * scale);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = outW;
+      canvas.height = outH;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, outW, outH);
+      return canvas;
+    }
+
+    async function handleFotoFile(file) {
+      try {
+        const img = await readFileAsImage(file);
+        // 3x4 => ratio 3:4 (portrait)
+        const canvas = centerCropToRatio(img, 360, 480, 3, 4);
+        const dataUrl = canvasToJpegDataUrl(canvas, 0.85);
+
+        if (dataUrl.length > MAX_DATAURL_CHARS) {
+          alert("A foto ficou grande demais. Tente outra (menor) ou tire novamente.");
+          return;
+        }
+
+        alunoFotoDataUrl = dataUrl;
+        setFotoPreview(alunoFotoDataUrl);
+      } catch (e) {
+        console.error(e);
+        alert("Falha ao processar a foto.");
+      }
+    }
+
+    async function handleDocFile(file) {
+      try {
+        const img = await readFileAsImage(file);
+        const canvas = resizeKeepAspect(img, LIMIT_DOC_MAX_SIDE);
+        const dataUrl = canvasToJpegDataUrl(canvas, 0.78);
+
+        if (dataUrl.length > MAX_DATAURL_CHARS) {
+          alert("O documento ficou grande demais. Tente outra foto (mais leve).");
+          return;
+        }
+
+        alunoDocDataUrl = dataUrl;
+        setDocPreview(alunoDocDataUrl);
+      } catch (e) {
+        console.error(e);
+        alert("Falha ao processar o documento.");
+      }
+    }
+
+    // =========================
     // ABAS
     // =========================
     function setupTabs() {
@@ -772,16 +1404,74 @@
       initFirebase();
 
       const ok = setupAuth();
-      if (!ok) return; // bloqueia aqui se não tiver email/sem permissão
+      if (!ok) return;
 
       setupTabs();
       renderUnitsSelector();
       listenUnit(selectedUnit);
 
       document.getElementById("btn-add-plano")?.addEventListener("click", addPlanoPrompt);
-      document.getElementById("btn-add-aluno")?.addEventListener("click", addAlunoPrompt);
       document.getElementById("btn-add-funcionario")?.addEventListener("click", addFuncionarioPrompt);
       document.getElementById("btn-add-lancamento")?.addEventListener("click", addLancamentoPrompt);
+
+      // Alunos (modal)
+      document.getElementById("btn-add-aluno")?.addEventListener("click", () => openAlunoModal("new"));
+
+      document.getElementById("btn-close-modal-aluno")?.addEventListener("click", closeAlunoModal);
+      document.getElementById("btn-cancel-modal-aluno")?.addEventListener("click", closeAlunoModal);
+      document.getElementById("btn-save-aluno")?.addEventListener("click", saveAlunoFromModal);
+
+      document.getElementById("btn-add-hist")?.addEventListener("click", () => {
+        histItems.push({ nome: "", inicio: "", fim: "" });
+        renderHist();
+      });
+
+      // Foto
+      const inputFotoCam = document.getElementById("input-foto-camera");
+      const inputFotoFile = document.getElementById("input-foto-file");
+      document.getElementById("btn-foto-tirar")?.addEventListener("click", () => inputFotoCam.click());
+      document.getElementById("btn-foto-anexar")?.addEventListener("click", () => inputFotoFile.click());
+      document.getElementById("btn-foto-remover")?.addEventListener("click", () => {
+        alunoFotoDataUrl = null;
+        setFotoPreview(null);
+      });
+
+      inputFotoCam?.addEventListener("change", (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        if (f) handleFotoFile(f);
+      });
+      inputFotoFile?.addEventListener("change", (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        if (f) handleFotoFile(f);
+      });
+
+      // Doc
+      const inputDocCam = document.getElementById("input-doc-camera");
+      const inputDocFile = document.getElementById("input-doc-file");
+      document.getElementById("btn-doc-tirar")?.addEventListener("click", () => inputDocCam.click());
+      document.getElementById("btn-doc-anexar")?.addEventListener("click", () => inputDocFile.click());
+      document.getElementById("btn-doc-remover")?.addEventListener("click", () => {
+        alunoDocDataUrl = null;
+        setDocPreview(null);
+      });
+
+      inputDocCam?.addEventListener("change", (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        if (f) handleDocFile(f);
+      });
+      inputDocFile?.addEventListener("change", (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        if (f) handleDocFile(f);
+      });
+
+      // Fecha modal clicando fora
+      document.getElementById("modal-aluno")?.addEventListener("click", (e) => {
+        if (e.target.id === "modal-aluno") closeAlunoModal();
+      });
     });
   </script>
 </body>
