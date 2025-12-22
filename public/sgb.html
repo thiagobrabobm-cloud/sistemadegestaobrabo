@@ -26,12 +26,31 @@
 
 <body class="min-h-screen">
 
-  <!-- LOGIN -->
-  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 hidden">
-    <div class="bg-[#2d3748] p-8 rounded-2xl max-w-md w-full shadow-xl text-center">
-      <h1 class="text-2xl font-bold mb-4">SISTEMA DE GESTÃO BRABO v5.0</h1>
-      <p class="text-sm text-gray-300 mb-6">Faça login com sua conta do Google autorizada para acessar o sistema.</p>
-      <p id="login-error" class="text-sm text-red-300 mt-2 hidden"></p>
+  <!-- LOGIN (ANTES DE LOGAR) -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-[#0f172a] border border-gray-700 p-8 rounded-2xl max-w-lg w-full shadow-2xl text-center">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">SISTEMA DE GESTÃO BRABO v5.0</h1>
+      <p class="text-sm text-gray-300 mb-6">
+        Entre para acessar o sistema. (Somente e-mails autorizados.)
+      </p>
+
+      <div id="login-actions" class="space-y-3">
+        <button id="btn-login-google"
+          class="w-full py-4 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-extrabold text-lg shadow">
+          Entrar com Google
+        </button>
+
+        <button id="btn-login-continue"
+          class="w-full py-4 rounded-xl bg-[#334155] hover:bg-[#475569] text-white font-extrabold text-lg shadow hidden">
+          Continuar
+        </button>
+
+        <p class="text-xs text-gray-400">
+          Dica: se você já entra pelo /dashboard e ele passa <b>userEmail</b>, o botão “Continuar” aparece automaticamente.
+        </p>
+      </div>
+
+      <p id="login-error" class="text-sm text-red-300 mt-4 hidden"></p>
     </div>
   </div>
 
@@ -40,12 +59,20 @@
     <header class="flex flex-wrap justify-between items-center gap-4 mb-6">
       <div>
         <h1 class="text-3xl sm:text-4xl font-extrabold text-white">SISTEMA DE GESTÃO BRABO v5.0</h1>
-        <div class="mt-2 flex items-center gap-3">
+        <div class="mt-2 flex flex-wrap items-center gap-3">
+          <div class="text-sm text-gray-300">
+            Logado como: <span id="user-email" class="text-white font-semibold">--</span>
+          </div>
+          <button id="btn-logout" class="px-4 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold no-print">
+            Sair
+          </button>
+        </div>
+
+        <div class="mt-3 flex items-center gap-3">
           <label class="text-sm text-gray-300">Unidade:</label>
           <select id="unit-selector" class="bg-[#2d3748] border border-gray-600 text-white text-sm rounded-lg p-2"></select>
         </div>
       </div>
-      <div class="hidden"><span id="user-email"></span></div>
     </header>
 
     <nav class="flex flex-wrap gap-2 mb-6 no-print">
@@ -200,7 +227,7 @@
         </div>
 
         <p class="text-xs text-gray-400 mt-3">
-          Sugestões: Luz, Água, Internet, Impostos, Folha de Pagamento, Aluguel, Manutenção, Marketing, Parceiros (TotalPass/Gympass)…
+          Sugestões: Luz, Água, Internet, Impostos, Folha, Aluguel, Marketing, Manutenção, <b>Prestadores de Serviço</b>, Parceiros (TotalPass/Gympass)…
         </p>
       </section>
 
@@ -290,9 +317,7 @@
   <!-- DATALIST Planos (ajuda a digitar no aluno) -->
   <datalist id="datalist-planos"></datalist>
 
-  <!-- =========================
-       MODAL ALUNO
-       ========================= -->
+  <!-- ========================= MODAL ALUNO ========================= -->
   <div id="modal-aluno" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
     <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
       <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
@@ -442,9 +467,7 @@
     </div>
   </div>
 
-  <!-- =========================
-       MODAL FUNCIONÁRIO
-       ========================= -->
+  <!-- ========================= MODAL FUNCIONÁRIO ========================= -->
   <div id="modal-func" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
     <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
       <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
@@ -590,9 +613,7 @@
     </div>
   </div>
 
-  <!-- =========================
-       MODAL PLANO
-       ========================= -->
+  <!-- ========================= MODAL PLANO ========================= -->
   <div id="modal-plano" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
     <div class="w-full max-w-3xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
       <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
@@ -650,15 +671,13 @@
     </div>
   </div>
 
-  <!-- =========================
-       MODAL LANÇAMENTO
-       ========================= -->
+  <!-- ========================= MODAL LANÇAMENTO ========================= -->
   <div id="modal-lanc" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
     <div class="w-full max-w-3xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
       <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
         <div>
           <h3 id="modal-lanc-title" class="text-lg font-bold text-white">Novo Lançamento</h3>
-          <p class="text-xs text-gray-400">Receitas e despesas da unidade. Use categorias sugeridas.</p>
+          <p class="text-xs text-gray-400">Receitas e despesas da unidade. (Inclui Prestadores de Serviço.)</p>
         </div>
         <button id="btn-close-modal-lanc" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Fechar</button>
       </div>
@@ -681,6 +700,12 @@
           <div class="md:col-span-2">
             <label class="text-sm text-gray-300">Descrição *</label>
             <input id="lanc-descricao" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Conta de luz Nov/2025" />
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="text-sm text-gray-300">Prestador/Fornecedor (opcional)</label>
+            <input id="lanc-fornecedor" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Eletricista João, Contador, Empresa X..." />
+            <p class="mt-1 text-[11px] text-gray-400">Use para despesas de prestadores (não funcionários).</p>
           </div>
 
           <div>
@@ -745,9 +770,11 @@
       "Academia Zanco - Caxias"
     ];
 
-    // Categorias sugeridas (você pode editar depois)
+    // Categorias sugeridas
     const CATS_DESPESA = [
-      "Luz","Água","Internet/Telefone","Aluguel","Impostos","Folha de Pagamento","Manutenção","Marketing","Material de limpeza","Equipamentos","Outras"
+      "Luz","Água","Internet/Telefone","Aluguel","Impostos",
+      "Folha de Pagamento","Prestadores de Serviço","Contabilidade","Manutenção","Marketing",
+      "Material de limpeza","Equipamentos","Outras"
     ];
     const CATS_RECEITA = [
       "Mensalidades","Matrículas","Parceiros - TotalPass","Parceiros - Gympass","Produtos/Loja","Outras"
@@ -792,9 +819,11 @@
     }
     function escapeAttr(str) { return String(str || "").replace(/"/g, "&quot;"); }
 
+    // ✅ CORRIGIDO: sem <script> dentro de template string (isso era o erro que “quebrava” e mostrava código na tela)
     function openPrintWindow(title, bodyHtml) {
       const w = window.open("", "_blank");
       if (!w) return alert("Seu navegador bloqueou a janela de impressão.");
+
       w.document.open();
       w.document.write(`
         <html><head><meta charset="utf-8"/>
@@ -811,17 +840,28 @@
           </style>
         </head><body>
           ${bodyHtml}
-          <script>window.print();</script>
         </body></html>
       `);
       w.document.close();
+
+      w.onload = () => {
+        try { w.focus(); w.print(); } catch (e) {}
+      };
     }
 
-    function showBlocked(message) {
+    function showLogin(message) {
       document.getElementById("app")?.classList.add("hidden");
       document.getElementById("login-screen")?.classList.remove("hidden");
       const err = document.getElementById("login-error");
-      if (err) { err.textContent = message; err.classList.remove("hidden"); }
+      if (err) {
+        if (message) { err.textContent = message; err.classList.remove("hidden"); }
+        else { err.textContent = ""; err.classList.add("hidden"); }
+      }
+    }
+
+    function showApp() {
+      document.getElementById("login-screen")?.classList.add("hidden");
+      document.getElementById("app")?.classList.remove("hidden");
     }
 
     // =========================
@@ -834,12 +874,12 @@
         auth = firebase.auth();
       } catch (e) {
         console.error("[SGB] Firebase init:", e);
-        showBlocked("Erro ao inicializar o Firebase. Verifique o console.");
+        showLogin("Erro ao inicializar o Firebase. Verifique o console.");
       }
     }
 
     // =========================
-    // AUTH VIA URL PARAM
+    // AUTH
     // =========================
     function getUserEmailFromUrl() {
       try {
@@ -849,17 +889,42 @@
       } catch { return null; }
     }
 
-    function setupAuth() {
-      const emailFromUrl = getUserEmailFromUrl();
-      if (!emailFromUrl) { showBlocked("Erro: não foi possível identificar o usuário logado."); return false; }
-      if (!allowedEmails.includes(emailFromUrl)) { showBlocked("Acesso negado: e-mail não autorizado."); return false; }
+    function setCurrentUser(email) {
+      currentUser = { email };
+      document.getElementById("user-email").textContent = email || "--";
+      showApp();
+    }
 
-      currentUser = { email: emailFromUrl };
-      document.getElementById("user-email").textContent = currentUser.email;
+    async function loginWithGoogle() {
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const res = await auth.signInWithPopup(provider);
+        const email = (res?.user?.email || "").toLowerCase();
 
-      document.getElementById("login-screen")?.classList.add("hidden");
-      document.getElementById("app")?.classList.remove("hidden");
-      return true;
+        if (!email) {
+          await auth.signOut();
+          return showLogin("Não foi possível obter o e-mail do Google.");
+        }
+        if (!allowedEmails.includes(email)) {
+          await auth.signOut();
+          return showLogin("Acesso negado: e-mail não autorizado.");
+        }
+
+        setCurrentUser(email);
+        startAfterLogin();
+      } catch (e) {
+        console.error("[SGB] login google:", e);
+        showLogin("Falha no login. Veja o console.");
+      }
+    }
+
+    function logout() {
+      unsubscribers.forEach((u) => u && u());
+      unsubscribers = [];
+      state.planos = []; state.alunos = []; state.funcionarios = []; state.lancamentos = [];
+      try { auth?.signOut?.(); } catch {}
+      currentUser = null;
+      showLogin("");
     }
 
     function getUnitRef() { return db.collection("unidades").doc(selectedUnit); }
@@ -890,7 +955,7 @@
         unitRef.collection("alunos").orderBy("createdAt", "desc").onSnapshot((snap) => {
           state.alunos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           renderAlunos();
-          generateRelatorios(); // atualiza se já tiver período
+          generateRelatorios();
         })
       );
 
@@ -906,7 +971,7 @@
           state.lancamentos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           renderLancamentos();
           updateKPIsAndCharts();
-          generateRelatorios(); // atualiza se já tiver período
+          generateRelatorios();
         })
       );
     }
@@ -1085,7 +1150,6 @@
         return;
       }
 
-      // ordena por nome
       const plans = [...state.planos].sort((a,b)=> String(a.nome_plano||"").localeCompare(String(b.nome_plano||"")));
 
       plans.forEach((p) => {
@@ -1142,12 +1206,17 @@
         const tipo = l.tipo || "DESPESA";
         const sinal = tipo === "DESPESA" ? "-" : "+";
         const valorClass = tipo === "DESPESA" ? "text-red-300" : "text-green-300";
+        const forn = (l.fornecedor || "").trim();
 
         const tr = document.createElement("tr");
         tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
 
         tr.innerHTML = `
-          <td class="p-2">${escapeHtml(l.descricao || "--")}${l.autoGerado ? ` <span class="text-[10px] text-gray-400">(auto)</span>` : ""}</td>
+          <td class="p-2">
+            ${escapeHtml(l.descricao || "--")}
+            ${forn ? `<div class="text-[11px] text-gray-400">Prestador: ${escapeHtml(forn)}</div>` : ``}
+            ${l.autoGerado ? `<span class="text-[10px] text-gray-400">(auto)</span>` : ""}
+          </td>
           <td class="p-2">${escapeHtml(l.categoria || "--")}</td>
           <td class="p-2">${escapeHtml(tipo)}</td>
           <td class="p-2 text-right ${valorClass}">${sinal} ${formatBRL(valor)}</td>
@@ -1280,19 +1349,19 @@
           const tipo = l.tipo || "--";
           const sinal = tipo === "DESPESA" ? "-" : "+";
           const cls = tipo === "DESPESA" ? "text-red-300" : "text-green-300";
+          const descExtra = (l.fornecedor || "").trim() ? ` (Prestador: ${l.fornecedor})` : "";
           tbody.innerHTML += `
             <tr class="border-b border-gray-700">
               <td class="p-2">${escapeHtml(l.dataVencimento||"--")}</td>
               <td class="p-2">${escapeHtml(tipo)}</td>
               <td class="p-2">${escapeHtml(l.categoria||"--")}</td>
-              <td class="p-2">${escapeHtml(l.descricao||"--")}</td>
+              <td class="p-2">${escapeHtml((l.descricao||"--") + descExtra)}</td>
               <td class="p-2 text-right ${cls}">${sinal} ${formatBRL(valor)}</td>
             </tr>
           `;
         });
       }
 
-      // alunos no período: usa "desde" se existir, senão createdAt
       const alunosPeriodo = state.alunos.filter(a => {
         const createdAt = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) : null;
         const d = a.desde || (createdAt ? createdAt.toISOString().slice(0,10) : "");
@@ -1331,15 +1400,18 @@
       const desp = fin.filter(l => l.tipo === "DESPESA").reduce((a,l)=>a+Number(l.valor||0),0);
       const saldo = receita - desp;
 
-      const rows = fin.map(l => `
-        <tr>
-          <td>${escapeHtml(l.dataVencimento||"--")}</td>
-          <td>${escapeHtml(l.tipo||"--")}</td>
-          <td>${escapeHtml(l.categoria||"--")}</td>
-          <td>${escapeHtml(l.descricao||"--")}</td>
-          <td style="text-align:right">${formatBRL(l.valor||0)}</td>
-        </tr>
-      `).join("");
+      const rows = fin.map(l => {
+        const descExtra = (l.fornecedor || "").trim() ? ` (Prestador: ${l.fornecedor})` : "";
+        return `
+          <tr>
+            <td>${escapeHtml(l.dataVencimento||"--")}</td>
+            <td>${escapeHtml(l.tipo||"--")}</td>
+            <td>${escapeHtml(l.categoria||"--")}</td>
+            <td>${escapeHtml((l.descricao||"--") + descExtra)}</td>
+            <td style="text-align:right">${formatBRL(l.valor||0)}</td>
+          </tr>
+        `;
+      }).join("");
 
       const alunosPeriodo = state.alunos.filter(a => {
         const createdAt = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) : null;
@@ -1618,10 +1690,14 @@
       };
     }
 
-    function findPlanoValorByNome(nomePlano) {
+    function findPlanoByNome(nomePlano) {
       const n = (nomePlano || "").trim().toLowerCase();
       if (!n) return null;
-      const p = state.planos.find(x => String(x.nome_plano||"").trim().toLowerCase() === n);
+      return state.planos.find(x => String(x.nome_plano||"").trim().toLowerCase() === n) || null;
+    }
+
+    function findPlanoValorByNome(nomePlano) {
+      const p = findPlanoByNome(nomePlano);
       if (!p) return null;
       const v = Number(p.valor || 0);
       return isNaN(v) ? null : v;
@@ -1640,6 +1716,7 @@
         autoGerado: true,
         origem: ref?.origem || "",
         refId: ref?.id || "",
+        fornecedor: "",
         createdBy: currentUser.email,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: currentUser.email,
@@ -1671,7 +1748,6 @@
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
 
-          // RECEITA automática se achar o plano
           const vPlano = findPlanoValorByNome(payload.planoAtual?.nome);
           if (vPlano != null) {
             await createLancamentoAuto({
@@ -1880,7 +1956,6 @@
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
 
-          // DESPESA automática salário
           const total = Number(payload.salario_base || 0) + Number(payload.adicional_unidade || 0);
           if (total > 0) {
             await createLancamentoAuto({
@@ -2078,6 +2153,7 @@
       document.getElementById("lanc-categoria").value = lanc?.categoria || ((tipo==="RECEITA") ? "Mensalidades" : "Luz");
 
       document.getElementById("lanc-descricao").value = lanc?.descricao || "";
+      document.getElementById("lanc-fornecedor").value = lanc?.fornecedor || "";
       document.getElementById("lanc-valor").value = (lanc?.valor ?? "");
       document.getElementById("lanc-venc").value = lanc?.dataVencimento || todayISO();
 
@@ -2104,6 +2180,7 @@
       const tipo = document.getElementById("lanc-tipo").value;
       const categoria = document.getElementById("lanc-categoria").value;
       const descricao = document.getElementById("lanc-descricao").value.trim();
+      const fornecedor = document.getElementById("lanc-fornecedor").value.trim() || "";
       const valor = Number(document.getElementById("lanc-valor").value || 0);
       const venc = document.getElementById("lanc-venc").value;
       const pago = document.getElementById("lanc-pago").checked;
@@ -2124,6 +2201,7 @@
           tipo,
           categoria,
           descricao,
+          fornecedor,
           valor,
           dataVencimento: venc,
           dataPagamento: pago ? pagoEm : null,
@@ -2163,11 +2241,12 @@
     }
 
     // =========================
-    // START
+    // START (APÓS LOGIN)
     // =========================
-    document.addEventListener("DOMContentLoaded", () => {
-      initFirebase();
-      if (!setupAuth()) return;
+    let started = false;
+    function startAfterLogin() {
+      if (started) return;
+      started = true;
 
       setupTabs();
       renderUnitsSelector();
@@ -2266,11 +2345,34 @@
         if (!checked) inp.value = "";
       });
 
-      // inicializa categorias
       fillLancCategoriaOptions("DESPESA");
-
-      // gera relatório default
       generateRelatorios();
+      updateKPIsAndCharts();
+    }
+
+    // =========================
+    // BOOT
+    // =========================
+    document.addEventListener("DOMContentLoaded", () => {
+      initFirebase();
+
+      document.getElementById("btn-logout")?.addEventListener("click", logout);
+
+      const btnGoogle = document.getElementById("btn-login-google");
+      btnGoogle?.addEventListener("click", loginWithGoogle);
+
+      const emailFromUrl = getUserEmailFromUrl();
+      const btnContinue = document.getElementById("btn-login-continue");
+      if (emailFromUrl && allowedEmails.includes(emailFromUrl)) {
+        btnContinue.classList.remove("hidden");
+        btnContinue.textContent = `Continuar como ${emailFromUrl}`;
+        btnContinue.addEventListener("click", () => {
+          setCurrentUser(emailFromUrl);
+          startAfterLogin();
+        });
+      }
+
+      showLogin("");
     });
   </script>
 </body>
