@@ -158,19 +158,26 @@
             Novo Funcionário
           </button>
         </div>
+
         <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
           <table class="w-full text-left text-sm">
             <thead>
               <tr class="border-b border-gray-600">
                 <th class="p-2">Nome</th>
                 <th class="p-2">Cargo</th>
-                <th class="p-2 text-right">Salário Base</th>
+                <th class="p-2">Desde</th>
+                <th class="p-2 text-right">Salário</th>
                 <th class="p-2">Criado por</th>
+                <th class="p-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody id="table-funcionarios"></tbody>
           </table>
         </div>
+
+        <p class="text-xs text-gray-400 mt-3">
+          Dica: “Salário” aqui é por unidade selecionada (base + adicional da unidade).
+        </p>
       </section>
 
       <!-- PLANOS -->
@@ -255,9 +262,10 @@
 
   <!-- =========================
        MODAL ALUNO (CRUD COMPLETO)
+       Ajuste de tamanho/scroll (resolve a caixa que não se ajusta)
        ========================= -->
   <div id="modal-aluno" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl">
+    <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
       <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
         <div>
           <h3 id="modal-aluno-title" class="text-lg font-bold text-white">Novo Aluno</h3>
@@ -268,7 +276,8 @@
         </button>
       </div>
 
-      <div class="p-4">
+      <!-- área rolável -->
+      <div class="p-4 flex-1 overflow-y-auto">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <!-- FOTO 3x4 -->
           <div class="lg:col-span-3">
@@ -389,9 +398,7 @@
                 </button>
               </div>
 
-              <div id="hist-container" class="mt-3 space-y-2">
-                <!-- linhas do histórico entram aqui -->
-              </div>
+              <div id="hist-container" class="mt-3 space-y-2"></div>
             </div>
 
             <!-- DOCUMENTO -->
@@ -431,7 +438,6 @@
               </div>
             </div>
 
-            <!-- ERRO -->
             <p id="modal-aluno-error" class="mt-3 text-sm text-red-300 hidden"></p>
           </div>
         </div>
@@ -442,6 +448,180 @@
           Cancelar
         </button>
         <button id="btn-save-aluno" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">
+          Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================
+       MODAL FUNCIONÁRIO (NOVO)
+       padrão igual ao aluno: foto 3x4 + documento + dados + salário base + adicional da unidade
+       ========================= -->
+  <div id="modal-func" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
+    <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
+      <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
+        <div>
+          <h3 id="modal-func-title" class="text-lg font-bold text-white">Novo Funcionário</h3>
+          <p class="text-xs text-gray-400">Salvo por unidade (base + adicional da unidade). Atualiza em tempo real.</p>
+        </div>
+        <button id="btn-close-modal-func" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">
+          Fechar
+        </button>
+      </div>
+
+      <div class="p-4 flex-1 overflow-y-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- FOTO 3x4 -->
+          <div class="lg:col-span-3">
+            <div class="bg-[#111827] border border-gray-700 rounded-xl p-3">
+              <div class="text-sm font-semibold mb-2">Foto (3x4)</div>
+
+              <div class="w-full aspect-[3/4] bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+                <img id="func-foto-preview" alt="Foto 3x4" class="w-full h-full object-cover hidden" />
+                <div id="func-foto-placeholder" class="text-xs text-gray-400 px-3 text-center">
+                  Sem foto. Use “Tirar” ou “Anexar”.
+                </div>
+              </div>
+
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button id="btn-func-foto-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">
+                  Tirar
+                </button>
+                <button id="btn-func-foto-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">
+                  Anexar
+                </button>
+                <button id="btn-func-foto-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">
+                  Remover
+                </button>
+              </div>
+
+              <p class="mt-2 text-[11px] text-gray-400">
+                Corte automático central (3:4). Se ficar ruim, tire novamente.
+              </p>
+
+              <input id="input-func-foto-camera" type="file" accept="image/*" capture="user" class="hidden" />
+              <input id="input-func-foto-file" type="file" accept="image/*" class="hidden" />
+            </div>
+          </div>
+
+          <!-- FORM -->
+          <div class="lg:col-span-9">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="text-sm text-gray-300">Nome *</label>
+                <input id="func-nome" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Nome do funcionário" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Cargo *</label>
+                <input id="func-cargo" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Recepção, Professor..." />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Data de contratação</label>
+                <input id="func-contratado" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
+                <p class="mt-1 text-[11px] text-gray-400">Se vazio, usa a data de criação.</p>
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">CPF</label>
+                <input id="func-cpf" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Somente números ou com pontos/traço" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">E-mail</label>
+                <input id="func-email" type="email" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="email@dominio.com" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Telefone</label>
+                <input id="func-tel1" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="(21) 99999-9999" />
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="text-sm text-gray-300">Endereço</label>
+                <input id="func-endereco" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Rua, número, bairro, cidade" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Status</label>
+                <select id="func-status" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
+                  <option value="Ativo">Ativo</option>
+                  <option value="Afastado">Afastado</option>
+                  <option value="Desligado">Desligado</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Salário base (R$)</label>
+                <input id="func-salario-base" type="number" step="0.01" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: 1412" />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Adicional desta unidade (R$)</label>
+                <input id="func-adicional" type="number" step="0.01" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: 150" />
+                <p class="mt-1 text-[11px] text-gray-400">Ex: salário mínimo + 150 por unidade.</p>
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-300">Salário total (automático)</label>
+                <input id="func-salario-total" disabled class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" />
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="text-sm text-gray-300">Observações</label>
+                <input id="func-obs" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: escala, restrições, etc." />
+              </div>
+            </div>
+
+            <!-- DOCUMENTO -->
+            <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-sm font-semibold">Documento (foto)</div>
+                  <div class="text-[11px] text-gray-400">Ex: atestado médico, documentos. (Imagem comprimida)</div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button id="btn-func-doc-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">
+                    Tirar
+                  </button>
+                  <button id="btn-func-doc-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">
+                    Anexar
+                  </button>
+                  <button id="btn-func-doc-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">
+                    Remover
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-3 flex items-start gap-3">
+                <div class="w-28 h-28 bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+                  <img id="func-doc-preview" alt="Documento" class="w-full h-full object-cover hidden" />
+                  <div id="func-doc-placeholder" class="text-[11px] text-gray-400 px-2 text-center">Sem documento</div>
+                </div>
+                <div class="text-xs text-gray-300">
+                  <div id="func-doc-info" class="text-gray-400">Nenhum documento anexado.</div>
+                  <button id="btn-func-doc-abrir" class="mt-2 px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold hidden">
+                    Abrir
+                  </button>
+                </div>
+
+                <input id="input-func-doc-camera" type="file" accept="image/*" capture="environment" class="hidden" />
+                <input id="input-func-doc-file" type="file" accept="image/*" class="hidden" />
+              </div>
+            </div>
+
+            <p id="modal-func-error" class="mt-3 text-sm text-red-300 hidden"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 p-4 border-t border-gray-700 bg-[#0b1220] rounded-b-2xl">
+        <button id="btn-cancel-modal-func" class="px-4 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">
+          Cancelar
+        </button>
+        <button id="btn-save-func" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">
           Salvar
         </button>
       </div>
@@ -532,19 +712,6 @@
       }
     }
 
-    function showModalError(msg) {
-      const el = document.getElementById("modal-aluno-error");
-      if (!el) return;
-      el.textContent = msg;
-      el.classList.remove("hidden");
-    }
-    function clearModalError() {
-      const el = document.getElementById("modal-aluno-error");
-      if (!el) return;
-      el.textContent = "";
-      el.classList.add("hidden");
-    }
-
     // =========================
     // FIREBASE INIT
     // =========================
@@ -596,7 +763,6 @@
       const userEmailSpan = document.getElementById("user-email");
       if (userEmailSpan) userEmailSpan.textContent = currentUser.email;
 
-      // libera o app
       const loginScreen = document.getElementById("login-screen");
       const appDiv = document.getElementById("app");
       if (loginScreen) loginScreen.classList.add("hidden");
@@ -636,6 +802,7 @@
         })
       );
 
+      // Funcionários (sem orderBy para não quebrar docs antigos sem createdAt)
       unsubscribers.push(
         unitRef.collection("funcionarios").onSnapshot((snap) => {
           state.funcionarios = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -749,20 +916,70 @@
 
       tbody.innerHTML = "";
       if (state.funcionarios.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-2 text-gray-400">Nenhum funcionário cadastrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-2 text-gray-400">Nenhum funcionário cadastrado.</td></tr>`;
         return;
       }
 
       state.funcionarios.forEach((f) => {
         const createdAt = f.createdAt ? (f.createdAt.toDate ? f.createdAt.toDate() : f.createdAt) : null;
+        const desde = f.contratadoEm ? new Date(f.contratadoEm) : createdAt;
+
+        const base = Number(f.salario_base || 0);
+        const adicional = Number(f.adicional_unidade || 0);
+        const total = base + adicional;
+
         const tr = document.createElement("tr");
         tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
-        tr.innerHTML = `
-          <td class="p-2">${f.nome || "--"}</td>
-          <td class="p-2">${f.cargo || "--"}</td>
-          <td class="p-2 text-right">${formatBRL(f.salario_base)}</td>
-          <td class="p-2 text-xs text-gray-300">${f.createdBy || "--"} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}</td>
+
+        const tdNome = document.createElement("td");
+        tdNome.className = "p-2";
+        tdNome.textContent = f.nome || "--";
+
+        const tdCargo = document.createElement("td");
+        tdCargo.className = "p-2";
+        tdCargo.textContent = f.cargo || "--";
+
+        const tdDesde = document.createElement("td");
+        tdDesde.className = "p-2";
+        tdDesde.textContent = desde ? fmtDateOnly(desde) : "--";
+
+        const tdSal = document.createElement("td");
+        tdSal.className = "p-2 text-right";
+        tdSal.innerHTML = `
+          <div class="font-semibold">${formatBRL(total)}</div>
+          <div class="text-[11px] text-gray-400">${formatBRL(base)} + ${formatBRL(adicional)}</div>
         `;
+
+        const tdCriado = document.createElement("td");
+        tdCriado.className = "p-2 text-xs text-gray-300";
+        tdCriado.textContent = `${f.createdBy || "--"} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}`;
+
+        const tdAcoes = document.createElement("td");
+        tdAcoes.className = "p-2 text-right";
+        const wrap = document.createElement("div");
+        wrap.className = "inline-flex gap-2";
+
+        const btnEdit = document.createElement("button");
+        btnEdit.className = "px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold";
+        btnEdit.textContent = "Editar";
+        btnEdit.addEventListener("click", () => openFuncModal("edit", f));
+
+        const btnDel = document.createElement("button");
+        btnDel.className = "px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-xs font-semibold";
+        btnDel.textContent = "Excluir";
+        btnDel.addEventListener("click", () => deleteFuncionario(f));
+
+        wrap.appendChild(btnEdit);
+        wrap.appendChild(btnDel);
+        tdAcoes.appendChild(wrap);
+
+        tr.appendChild(tdNome);
+        tr.appendChild(tdCargo);
+        tr.appendChild(tdDesde);
+        tr.appendChild(tdSal);
+        tr.appendChild(tdCriado);
+        tr.appendChild(tdAcoes);
+
         tbody.appendChild(tr);
       });
     }
@@ -898,7 +1115,7 @@
     }
 
     // =========================
-    // CRUD SIMPLES (OUTRAS ABAS)
+    // CRUD SIMPLES (PLANOS/LANÇAMENTOS)
     // =========================
     function getUnitRef() {
       return db.collection("unidades").doc(selectedUnit);
@@ -921,28 +1138,6 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       alert("Plano criado com sucesso.");
-    }
-
-    async function addFuncionarioPrompt() {
-      if (!currentUser?.email) return alert("Faça login antes.");
-      const nome = prompt("Nome do funcionário:");
-      if (!nome) return;
-      const cargo = prompt("Cargo:");
-      if (!cargo) return;
-      const salStr = prompt("Salário base (R$):", "0");
-      const salario = Number(salStr || "0");
-
-      await getUnitRef().collection("funcionarios").add({
-        nome,
-        cargo,
-        salario_base: salario,
-        status: "Ativo",
-        createdBy: currentUser.email,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedBy: currentUser.email,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      alert("Funcionário criado com sucesso.");
     }
 
     async function addLancamentoPrompt() {
@@ -976,8 +1171,21 @@
     }
 
     // =========================
-    // ALUNOS - MODAL COMPLETO
+    // ALUNOS - MODAL COMPLETO (seu)
     // =========================
+    function showModalError(msg) {
+      const el = document.getElementById("modal-aluno-error");
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove("hidden");
+    }
+    function clearModalError() {
+      const el = document.getElementById("modal-aluno-error");
+      if (!el) return;
+      el.textContent = "";
+      el.classList.add("hidden");
+    }
+
     let alunoModalMode = "new";      // "new" | "edit"
     let alunoEditingId = null;
     let alunoFotoDataUrl = null;
@@ -988,6 +1196,15 @@
     const LIMIT_DOC_MAX_SIDE = 1280;    // documento legível, ainda leve
     const MAX_DATAURL_CHARS = 850000;   // margem pra não estourar 1MB do Firestore
 
+    function escapeHtml(str) {
+      return String(str || "").replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[m]));
+    }
+    function escapeAttr(str) {
+      return String(str || "").replace(/"/g, "&quot;");
+    }
+
     function openAlunoModal(mode, aluno = null) {
       clearModalError();
 
@@ -996,7 +1213,6 @@
 
       document.getElementById("modal-aluno-title").textContent = mode === "edit" ? "Editar Aluno" : "Novo Aluno";
 
-      // reset
       alunoFotoDataUrl = null;
       alunoDocDataUrl = null;
       histItems = [];
@@ -1004,7 +1220,6 @@
       setFotoPreview(null);
       setDocPreview(null);
 
-      // preencher campos
       document.getElementById("aluno-nome").value = aluno?.nome_completo || "";
       document.getElementById("aluno-nascimento").value = aluno?.nascimento || "";
       document.getElementById("aluno-cpf").value = aluno?.cpf || "";
@@ -1015,12 +1230,10 @@
       document.getElementById("aluno-status").value = aluno?.status_aluno || "Ativo";
       document.getElementById("aluno-desde").value = aluno?.desde || "";
 
-      // plano atual
       document.getElementById("plano-atual-nome").value = aluno?.planoAtual?.nome || "";
       document.getElementById("plano-atual-inicio").value = aluno?.planoAtual?.inicio || "";
       document.getElementById("plano-atual-fim").value = aluno?.planoAtual?.fim || "";
 
-      // histórico
       const incomingHist = Array.isArray(aluno?.planosHistorico) ? aluno.planosHistorico : [];
       histItems = incomingHist.map(x => ({
         nome: x?.nome || "",
@@ -1029,7 +1242,6 @@
       }));
       renderHist();
 
-      // foto/documento do firestore
       if (aluno?.foto3x4 && typeof aluno.foto3x4 === "string") {
         alunoFotoDataUrl = aluno.foto3x4;
         setFotoPreview(alunoFotoDataUrl);
@@ -1148,7 +1360,6 @@
         box.appendChild(row);
       });
 
-      // bind inputs (delegado)
       box.querySelectorAll("input[data-hist]").forEach((inp) => {
         inp.addEventListener("input", (e) => {
           const idx = Number(e.target.getAttribute("data-idx"));
@@ -1156,15 +1367,6 @@
           histItems[idx][key] = e.target.value;
         });
       });
-    }
-
-    function escapeHtml(str) {
-      return String(str || "").replace(/[&<>"']/g, (m) => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
-      }[m]));
-    }
-    function escapeAttr(str) {
-      return String(str || "").replace(/"/g, "&quot;");
     }
 
     async function saveAlunoFromModal() {
@@ -1202,12 +1404,10 @@
           .map(x => ({ nome: (x.nome || "").trim(), inicio: x.inicio || "", fim: x.fim || "" }))
           .filter(x => x.nome || x.inicio || x.fim),
 
-        // anexos
         foto3x4: alunoFotoDataUrl || "",
         docImagem: alunoDocDataUrl || ""
       };
 
-      // proteção básica contra estourar tamanho
       if ((payload.foto3x4 && payload.foto3x4.length > MAX_DATAURL_CHARS) ||
           (payload.docImagem && payload.docImagem.length > MAX_DATAURL_CHARS)) {
         showModalError("Imagem muito grande. Tente anexar novamente (ou use uma foto com menor resolução).");
@@ -1259,7 +1459,207 @@
       }
     }
 
-    // ====== IMAGENS (foto 3x4 e documento)
+    // =========================
+    // FUNCIONÁRIOS - MODAL (NOVO)
+    // =========================
+    function showFuncError(msg) {
+      const el = document.getElementById("modal-func-error");
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove("hidden");
+    }
+    function clearFuncError() {
+      const el = document.getElementById("modal-func-error");
+      if (!el) return;
+      el.textContent = "";
+      el.classList.add("hidden");
+    }
+
+    let funcModalMode = "new"; // "new" | "edit"
+    let funcEditingId = null;
+    let funcFotoDataUrl = null;
+    let funcDocDataUrl = null;
+
+    function openFuncModal(mode, func = null) {
+      clearFuncError();
+
+      funcModalMode = mode;
+      funcEditingId = func?.id || null;
+
+      document.getElementById("modal-func-title").textContent = mode === "edit" ? "Editar Funcionário" : "Novo Funcionário";
+
+      funcFotoDataUrl = null;
+      funcDocDataUrl = null;
+
+      setFuncFotoPreview(null);
+      setFuncDocPreview(null);
+
+      document.getElementById("func-nome").value = func?.nome || "";
+      document.getElementById("func-cargo").value = func?.cargo || "";
+      document.getElementById("func-contratado").value = func?.contratadoEm || "";
+      document.getElementById("func-cpf").value = func?.cpf || "";
+      document.getElementById("func-email").value = func?.email || "";
+      document.getElementById("func-tel1").value = func?.tel_principal || "";
+      document.getElementById("func-endereco").value = func?.endereco || "";
+      document.getElementById("func-status").value = func?.status_funcionario || "Ativo";
+
+      document.getElementById("func-salario-base").value = (func?.salario_base ?? "");
+      document.getElementById("func-adicional").value = (func?.adicional_unidade ?? "");
+      document.getElementById("func-obs").value = func?.obs || "";
+
+      updateFuncSalarioTotal();
+
+      if (func?.foto3x4 && typeof func.foto3x4 === "string") {
+        funcFotoDataUrl = func.foto3x4;
+        setFuncFotoPreview(funcFotoDataUrl);
+      }
+      if (func?.docImagem && typeof func.docImagem === "string") {
+        funcDocDataUrl = func.docImagem;
+        setFuncDocPreview(funcDocDataUrl);
+      }
+
+      const modal = document.getElementById("modal-func");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeFuncModal() {
+      const modal = document.getElementById("modal-func");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function setFuncFotoPreview(dataUrl) {
+      const img = document.getElementById("func-foto-preview");
+      const ph = document.getElementById("func-foto-placeholder");
+      if (!dataUrl) {
+        img.classList.add("hidden");
+        img.src = "";
+        ph.classList.remove("hidden");
+        return;
+      }
+      img.src = dataUrl;
+      img.classList.remove("hidden");
+      ph.classList.add("hidden");
+    }
+
+    function setFuncDocPreview(dataUrl) {
+      const img = document.getElementById("func-doc-preview");
+      const ph = document.getElementById("func-doc-placeholder");
+      const info = document.getElementById("func-doc-info");
+      const btnAbrir = document.getElementById("btn-func-doc-abrir");
+
+      if (!dataUrl) {
+        img.classList.add("hidden");
+        img.src = "";
+        ph.classList.remove("hidden");
+        info.textContent = "Nenhum documento anexado.";
+        btnAbrir.classList.add("hidden");
+        return;
+      }
+
+      img.src = dataUrl;
+      img.classList.remove("hidden");
+      ph.classList.add("hidden");
+      info.textContent = "Documento anexado.";
+      btnAbrir.classList.remove("hidden");
+
+      btnAbrir.onclick = () => {
+        const w = window.open();
+        if (!w) return;
+        w.document.write(`<img src="${dataUrl}" style="max-width:100%;height:auto;" />`);
+      };
+    }
+
+    function updateFuncSalarioTotal() {
+      const base = Number(document.getElementById("func-salario-base").value || 0);
+      const add = Number(document.getElementById("func-adicional").value || 0);
+      document.getElementById("func-salario-total").value = formatBRL(base + add);
+    }
+
+    async function saveFuncionarioFromModal() {
+      clearFuncError();
+
+      if (!currentUser?.email) {
+        showFuncError("Você não está logado.");
+        return;
+      }
+
+      const nome = document.getElementById("func-nome").value.trim();
+      const cargo = document.getElementById("func-cargo").value.trim();
+      if (!nome) return showFuncError("Nome é obrigatório.");
+      if (!cargo) return showFuncError("Cargo é obrigatório.");
+
+      const salarioBase = Number(document.getElementById("func-salario-base").value || 0);
+      const adicional = Number(document.getElementById("func-adicional").value || 0);
+
+      const payload = {
+        nome,
+        cargo,
+        contratadoEm: document.getElementById("func-contratado").value || "",
+        cpf: document.getElementById("func-cpf").value.trim() || "",
+        email: (document.getElementById("func-email").value || "").trim(),
+        tel_principal: document.getElementById("func-tel1").value.trim() || "",
+        endereco: document.getElementById("func-endereco").value.trim() || "",
+        status_funcionario: document.getElementById("func-status").value || "Ativo",
+        salario_base: salarioBase,
+        adicional_unidade: adicional,
+        obs: document.getElementById("func-obs").value.trim() || "",
+        foto3x4: funcFotoDataUrl || "",
+        docImagem: funcDocDataUrl || ""
+      };
+
+      if ((payload.foto3x4 && payload.foto3x4.length > MAX_DATAURL_CHARS) ||
+          (payload.docImagem && payload.docImagem.length > MAX_DATAURL_CHARS)) {
+        showFuncError("Imagem muito grande. Tente anexar novamente com menor resolução.");
+        return;
+      }
+
+      const col = getUnitRef().collection("funcionarios");
+
+      try {
+        if (funcModalMode === "new") {
+          await col.add({
+            ...payload,
+            createdBy: currentUser.email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: currentUser.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } else {
+          if (!funcEditingId) return showFuncError("Erro interno: funcEditingId ausente.");
+          await col.doc(funcEditingId).update({
+            ...payload,
+            updatedBy: currentUser.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+
+        closeFuncModal();
+      } catch (err) {
+        console.error("[SGB] Erro ao salvar funcionário:", err);
+        showFuncError("Erro ao salvar. Veja o console.");
+      }
+    }
+
+    async function deleteFuncionario(func) {
+      if (!currentUser?.email) return alert("Faça login antes.");
+      if (!func?.id) return;
+
+      const ok = confirm(`Excluir o funcionário "${func.nome || ""}"? Isso não pode ser desfeito.`);
+      if (!ok) return;
+
+      try {
+        await getUnitRef().collection("funcionarios").doc(func.id).delete();
+      } catch (err) {
+        console.error("[SGB] Erro ao excluir funcionário:", err);
+        alert("Erro ao excluir. Veja o console.");
+      }
+    }
+
+    // =========================
+    // IMAGENS (reuso: aluno e func)
+    // =========================
     function readFileAsImage(file) {
       return new Promise((resolve, reject) => {
         const fr = new FileReader();
@@ -1279,7 +1679,6 @@
     }
 
     function centerCropToRatio(img, targetW, targetH, ratioW, ratioH) {
-      // crop central mantendo ratioW:ratioH
       const srcW = img.naturalWidth;
       const srcH = img.naturalHeight;
 
@@ -1288,11 +1687,9 @@
 
       let cropW, cropH;
       if (srcRatio > targetRatio) {
-        // imagem muito larga
         cropH = srcH;
         cropW = Math.floor(srcH * targetRatio);
       } else {
-        // imagem muito alta
         cropW = srcW;
         cropH = Math.floor(srcW / targetRatio);
       }
@@ -1332,10 +1729,9 @@
       return canvas;
     }
 
-    async function handleFotoFile(file) {
+    async function handleFotoFile(file, onDone) {
       try {
         const img = await readFileAsImage(file);
-        // 3x4 => ratio 3:4 (portrait)
         const canvas = centerCropToRatio(img, 360, 480, 3, 4);
         const dataUrl = canvasToJpegDataUrl(canvas, 0.85);
 
@@ -1344,15 +1740,14 @@
           return;
         }
 
-        alunoFotoDataUrl = dataUrl;
-        setFotoPreview(alunoFotoDataUrl);
+        onDone(dataUrl);
       } catch (e) {
         console.error(e);
         alert("Falha ao processar a foto.");
       }
     }
 
-    async function handleDocFile(file) {
+    async function handleDocFile(file, onDone) {
       try {
         const img = await readFileAsImage(file);
         const canvas = resizeKeepAspect(img, LIMIT_DOC_MAX_SIDE);
@@ -1363,8 +1758,7 @@
           return;
         }
 
-        alunoDocDataUrl = dataUrl;
-        setDocPreview(alunoDocDataUrl);
+        onDone(dataUrl);
       } catch (e) {
         console.error(e);
         alert("Falha ao processar o documento.");
@@ -1411,10 +1805,9 @@
       listenUnit(selectedUnit);
 
       document.getElementById("btn-add-plano")?.addEventListener("click", addPlanoPrompt);
-      document.getElementById("btn-add-funcionario")?.addEventListener("click", addFuncionarioPrompt);
       document.getElementById("btn-add-lancamento")?.addEventListener("click", addLancamentoPrompt);
 
-      // Alunos (modal)
+      // ====== Alunos (modal)
       document.getElementById("btn-add-aluno")?.addEventListener("click", () => openAlunoModal("new"));
 
       document.getElementById("btn-close-modal-aluno")?.addEventListener("click", closeAlunoModal);
@@ -1426,7 +1819,7 @@
         renderHist();
       });
 
-      // Foto
+      // Foto aluno
       const inputFotoCam = document.getElementById("input-foto-camera");
       const inputFotoFile = document.getElementById("input-foto-file");
       document.getElementById("btn-foto-tirar")?.addEventListener("click", () => inputFotoCam.click());
@@ -1439,15 +1832,15 @@
       inputFotoCam?.addEventListener("change", (e) => {
         const f = e.target.files?.[0];
         e.target.value = "";
-        if (f) handleFotoFile(f);
+        if (f) handleFotoFile(f, (dataUrl) => { alunoFotoDataUrl = dataUrl; setFotoPreview(dataUrl); });
       });
       inputFotoFile?.addEventListener("change", (e) => {
         const f = e.target.files?.[0];
         e.target.value = "";
-        if (f) handleFotoFile(f);
+        if (f) handleFotoFile(f, (dataUrl) => { alunoFotoDataUrl = dataUrl; setFotoPreview(dataUrl); });
       });
 
-      // Doc
+      // Doc aluno
       const inputDocCam = document.getElementById("input-doc-camera");
       const inputDocFile = document.getElementById("input-doc-file");
       document.getElementById("btn-doc-tirar")?.addEventListener("click", () => inputDocCam.click());
@@ -1460,17 +1853,75 @@
       inputDocCam?.addEventListener("change", (e) => {
         const f = e.target.files?.[0];
         e.target.value = "";
-        if (f) handleDocFile(f);
+        if (f) handleDocFile(f, (dataUrl) => { alunoDocDataUrl = dataUrl; setDocPreview(dataUrl); });
       });
       inputDocFile?.addEventListener("change", (e) => {
         const f = e.target.files?.[0];
         e.target.value = "";
-        if (f) handleDocFile(f);
+        if (f) handleDocFile(f, (dataUrl) => { alunoDocDataUrl = dataUrl; setDocPreview(dataUrl); });
       });
 
-      // Fecha modal clicando fora
+      // Fecha modal aluno clicando fora
       document.getElementById("modal-aluno")?.addEventListener("click", (e) => {
         if (e.target.id === "modal-aluno") closeAlunoModal();
+      });
+
+      // ====== Funcionários (modal novo)
+      document.getElementById("btn-add-funcionario")?.addEventListener("click", () => openFuncModal("new"));
+
+      document.getElementById("btn-close-modal-func")?.addEventListener("click", closeFuncModal);
+      document.getElementById("btn-cancel-modal-func")?.addEventListener("click", closeFuncModal);
+      document.getElementById("btn-save-func")?.addEventListener("click", saveFuncionarioFromModal);
+
+      // salário total automático
+      document.getElementById("func-salario-base")?.addEventListener("input", updateFuncSalarioTotal);
+      document.getElementById("func-adicional")?.addEventListener("input", updateFuncSalarioTotal);
+
+      // Foto func
+      const inputFuncFotoCam = document.getElementById("input-func-foto-camera");
+      const inputFuncFotoFile = document.getElementById("input-func-foto-file");
+      document.getElementById("btn-func-foto-tirar")?.addEventListener("click", () => inputFuncFotoCam.click());
+      document.getElementById("btn-func-foto-anexar")?.addEventListener("click", () => inputFuncFotoFile.click());
+      document.getElementById("btn-func-foto-remover")?.addEventListener("click", () => {
+        funcFotoDataUrl = null;
+        setFuncFotoPreview(null);
+      });
+
+      inputFuncFotoCam?.addEventListener("change", (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        if (f) handleFotoFile(f, (dataUrl) => { funcFotoDataUrl = dataUrl; setFuncFotoPreview(dataUrl); });
+      });
+      inputFuncFotoFile?.addEventListener("change", (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        if (f) handleFotoFile(f, (dataUrl) => { funcFotoDataUrl = dataUrl; setFuncFotoPreview(dataUrl); });
+      });
+
+      // Doc func
+      const inputFuncDocCam = document.getElementById("input-func-doc-camera");
+      const inputFuncDocFile = document.getElementById("input-func-doc-file");
+      document.getElementById("btn-func-doc-tirar")?.addEventListener("click", () => inputFuncDocCam.click());
+      document.getElementById("btn-func-doc-anexar")?.addEventListener("click", () => inputFuncDocFile.click());
+      document.getElementById("btn-func-doc-remover")?.addEventListener("click", () => {
+        funcDocDataUrl = null;
+        setFuncDocPreview(null);
+      });
+
+      inputFuncDocCam?.addEventListener("change", (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        if (f) handleDocFile(f, (dataUrl) => { funcDocDataUrl = dataUrl; setFuncDocPreview(dataUrl); });
+      });
+      inputFuncDocFile?.addEventListener("change", (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        if (f) handleDocFile(f, (dataUrl) => { funcDocDataUrl = dataUrl; setFuncDocPreview(dataUrl); });
+      });
+
+      // Fecha modal func clicando fora
+      document.getElementById("modal-func")?.addEventListener("click", (e) => {
+        if (e.target.id === "modal-func") closeFuncModal();
       });
     });
   </script>
