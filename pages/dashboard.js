@@ -7,22 +7,16 @@ export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // Se não tiver sessão, manda de volta para a tela de login (/)
   useEffect(() => {
     if (status === "loading") return;
-    if (!session) {
-      router.replace("/");
-    }
+    if (!session) router.replace("/");
   }, [session, status, router]);
 
-  // Monta a URL do iframe já com o e-mail do NextAuth
   const iframeSrc = useMemo(() => {
     const email = encodeURIComponent(session?.user?.email || "");
-    // v=... ajuda a “forçar” atualizar quando a Vercel/browser estiver cacheando
     return `/sgb.html?v=5.0.1&userEmail=${email}`;
   }, [session?.user?.email]);
 
-  // Enquanto carrega a sessão ou redireciona
   if (status === "loading" || !session) {
     return (
       <div
@@ -40,11 +34,11 @@ export default function Dashboard() {
     );
   }
 
-  // Usuário logado -> mostra cabeçalho + iframe com o sistema sgb.html
   return (
     <div
       style={{
         minHeight: "100vh",
+        height: "100vh",
         display: "flex",
         flexDirection: "column",
         backgroundColor: "#030712",
@@ -54,20 +48,22 @@ export default function Dashboard() {
       {/* Cabeçalho */}
       <header
         style={{
-          padding: "12px 20px",
+          padding: "16px 24px", // um pouco maior
           backgroundColor: "#111827",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+          gap: 12,
+          flexWrap: "wrap",
         }}
       >
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700 }}>
-            Sistema de Gestão Brabo v5.0
-          </h1>
-          <p style={{ marginTop: 4, fontSize: 14, color: "#9ca3af" }}>
-            Logado como: {session.user?.email}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <p style={{ fontSize: 16, fontWeight: 700, color: "#e5e7eb" }}>
+            Logado como:{" "}
+            <span style={{ fontWeight: 800 }}>
+              {session.user?.email || "-"}
+            </span>
           </p>
         </div>
 
@@ -76,8 +72,8 @@ export default function Dashboard() {
             <img
               src={session.user.image}
               alt="Avatar"
-              width={40}
-              height={40}
+              width={42}
+              height={42}
               style={{ borderRadius: "9999px" }}
             />
           )}
@@ -87,10 +83,10 @@ export default function Dashboard() {
             style={{
               backgroundColor: "#dc2626",
               border: "none",
-              padding: "8px 16px",
-              borderRadius: 8,
+              padding: "10px 18px",
+              borderRadius: 10,
               color: "#f9fafb",
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: "pointer",
             }}
           >
@@ -99,15 +95,16 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Conteúdo: o seu sistema v5.0 em sgb.html */}
-      <main style={{ flex: 1 }}>
+      {/* Conteúdo: iframe ocupa tudo que sobrar */}
+      <main style={{ flex: 1, minHeight: 0 }}>
         <iframe
           src={iframeSrc}
           title="Sistema de Gestão Brabo"
           style={{
             width: "100%",
-            height: "calc(100vh - 60px)", // 60px ~ altura do header
+            height: "100%",
             border: "none",
+            display: "block",
           }}
         />
       </main>
