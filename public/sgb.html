@@ -1,2379 +1,1699 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
+
 <head>
+
   <meta charset="UTF-8" />
+
   <title>SISTEMA DE GESTÃO BRABO v5.0</title>
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+
+
   <script src="https://cdn.tailwindcss.com"></script>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+
+
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 
+  <!-- ✅ NOVO (para anexos online no Storage, sem quebrar o que já existe) -->
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
+
+
+
   <style>
+
     body { background-color:#1a202c; color:#e2e8f0; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+
     .tab-active { background-color:#4299e1; color:white; }
+
     .tab-inactive { background-color:#2d3748; color:#e2e8f0; }
+
     .tab-inactive:hover { background-color:#4a5568; }
+
+
+
+    /* Topbar */
+
+    .topbar-blur { backdrop-filter: blur(10px); }
+
+
+
+    /* Print */
+
     @media print {
+
       .no-print { display:none !important; }
+
       body { background:#fff !important; color:#111 !important; }
+
+      #app { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+
+      .print-page { padding: 18px !important; }
+
+      .print-card { border: 1px solid #ddd !important; border-radius: 8px !important; padding: 12px !important; margin-bottom: 12px !important; }
+
+      .print-muted { color:#555 !important; font-size: 12px !important; }
+
     }
+
   </style>
+
 </head>
+
+
 
 <body class="min-h-screen">
 
+
+
   <!-- LOGIN (ANTES DE LOGAR) -->
+
   <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+
     <div class="bg-[#0f172a] border border-gray-700 p-8 rounded-2xl max-w-lg w-full shadow-2xl text-center">
+
       <h1 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">SISTEMA DE GESTÃO BRABO v5.0</h1>
+
       <p class="text-sm text-gray-300 mb-6">
+
         Entre para acessar o sistema. (Somente e-mails autorizados.)
+
       </p>
 
+
+
       <div id="login-actions" class="space-y-3">
+
         <button id="btn-login-google"
+
           class="w-full py-4 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-extrabold text-lg shadow">
+
           Entrar com Google
+
         </button>
+
+
 
         <button id="btn-login-continue"
+
           class="w-full py-4 rounded-xl bg-[#334155] hover:bg-[#475569] text-white font-extrabold text-lg shadow hidden">
+
           Continuar
+
         </button>
 
+
+
         <p class="text-xs text-gray-400">
+
           Dica: se você já entra pelo /dashboard e ele passa <b>userEmail</b>, o botão “Continuar” aparece automaticamente.
+
         </p>
+
       </div>
+
+
 
       <p id="login-error" class="text-sm text-red-300 mt-4 hidden"></p>
+
     </div>
+
   </div>
+
+
 
   <!-- APP -->
-  <div id="app" class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto hidden">
-    <header class="flex flex-wrap justify-between items-center gap-4 mb-6">
-      <div>
-        <h1 class="text-3xl sm:text-4xl font-extrabold text-white">SISTEMA DE GESTÃO BRABO v5.0</h1>
-        <div class="mt-2 flex flex-wrap items-center gap-3">
-          <div class="text-sm text-gray-300">
-            Logado como: <span id="user-email" class="text-white font-semibold">--</span>
+
+  <div id="app" class="hidden">
+
+
+
+    <!-- ✅ TOPBAR ÚNICO (remove duplicidade de Logado/Sair dentro do app) -->
+
+    <header class="no-print sticky top-0 z-40 border-b border-gray-700 bg-[#0b1220]/90 topbar-blur">
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+
+        <div class="flex items-center gap-3">
+
+          <div class="w-9 h-9 rounded-xl bg-[#111827] border border-gray-700 flex items-center justify-center font-black text-white">
+
+            SGB
+
           </div>
-          <button id="btn-logout" class="px-4 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold no-print">
-            Sair
-          </button>
+
+          <div>
+
+            <div class="text-white font-extrabold leading-tight">SISTEMA DE GESTÃO BRABO</div>
+
+            <div class="text-xs text-gray-400 leading-tight">v5.0</div>
+
+          </div>
+
         </div>
 
-        <div class="mt-3 flex items-center gap-3">
-          <label class="text-sm text-gray-300">Unidade:</label>
-          <select id="unit-selector" class="bg-[#2d3748] border border-gray-600 text-white text-sm rounded-lg p-2"></select>
+
+
+        <div class="flex flex-wrap items-center gap-3">
+
+          <div class="flex items-center gap-2">
+
+            <span class="text-xs text-gray-400">Unidade:</span>
+
+            <select id="unit-selector" class="bg-[#111827] border border-gray-700 text-white text-sm rounded-lg p-2"></select>
+
+          </div>
+
+
+
+          <div class="hidden sm:block h-8 w-px bg-gray-700"></div>
+
+
+
+          <div class="flex items-center gap-2">
+
+            <div class="text-sm text-gray-300">
+
+              Logado como: <span id="user-email" class="text-white font-semibold">--</span>
+
+            </div>
+
+            <button id="btn-logout" class="px-4 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">
+
+              Sair
+
+            </button>
+
+          </div>
+
         </div>
+
       </div>
+
     </header>
 
-    <nav class="flex flex-wrap gap-2 mb-6 no-print">
-      <button data-tab="visaoGeral" class="tab-btn tab-active py-2 px-4 rounded-lg text-sm font-semibold">Visão Geral</button>
-      <button data-tab="alunos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Alunos</button>
-      <button data-tab="funcionarios" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Funcionários</button>
-      <button data-tab="planos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Planos</button>
-      <button data-tab="lancamentos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Lançamentos</button>
-      <button data-tab="relatorios" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Relatórios</button>
-    </nav>
 
-    <main>
-      <!-- VISÃO GERAL -->
-      <section id="tab-visaoGeral" class="tab-content">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-            <div class="text-sm text-gray-300 mb-1">Receita Bruta (mês)</div>
-            <div id="kpi-receita" class="text-3xl font-bold">R$ 0,00</div>
-          </div>
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-            <div class="text-sm text-gray-300 mb-1">Custo Total (mês)</div>
-            <div id="kpi-custo" class="text-3xl font-bold">R$ 0,00</div>
-          </div>
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-            <div class="text-sm text-gray-300 mb-1">Saldo (mês)</div>
-            <div id="kpi-saldo" class="text-3xl font-bold">R$ 0,00</div>
-          </div>
-        </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow lg:col-span-2">
-            <h3 class="text-lg font-bold mb-3">Receita vs. Despesas (Mês Atual)</h3>
-            <canvas id="chart-receita-despesa"></canvas>
-          </div>
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-            <h3 class="text-lg font-bold mb-3">Top 5 Despesas (Mês Atual)</h3>
-            <canvas id="chart-despesas-top"></canvas>
-          </div>
-        </div>
-      </section>
+    <!-- CONTEÚDO -->
 
-      <!-- ALUNOS -->
-      <section id="tab-alunos" class="tab-content hidden">
-        <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
-          <h3 class="text-lg font-bold">Alunos</h3>
-          <button id="btn-add-aluno" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
-            Novo Aluno
-          </button>
-        </div>
+    <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
 
-        <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead>
-              <tr class="border-b border-gray-600">
-                <th class="p-2">Nome</th>
-                <th class="p-2">Email</th>
-                <th class="p-2">Status</th>
-                <th class="p-2">Desde</th>
-                <th class="p-2">Criado por</th>
-                <th class="p-2 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="table-alunos"></tbody>
-          </table>
-        </div>
-      </section>
+      <div class="mb-6">
 
-      <!-- FUNCIONÁRIOS -->
-      <section id="tab-funcionarios" class="tab-content hidden">
-        <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
-          <h3 class="text-lg font-bold">Funcionários</h3>
-          <button id="btn-add-funcionario" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
-            Novo Funcionário
-          </button>
-        </div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-white">SISTEMA DE GESTÃO BRABO v5.0</h1>
 
-        <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead>
-              <tr class="border-b border-gray-600">
-                <th class="p-2">Nome</th>
-                <th class="p-2">Cargo</th>
-                <th class="p-2">Desde</th>
-                <th class="p-2 text-right">Salário</th>
-                <th class="p-2">Criado por</th>
-                <th class="p-2 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="table-funcionarios"></tbody>
-          </table>
-        </div>
+        <p class="text-sm text-gray-400 mt-1">
 
-        <p class="text-xs text-gray-400 mt-3">
-          “Salário” aqui é por unidade selecionada (base + adicional desta unidade).
+          Painel por unidade. Relatórios por período e base pronta para auditoria/IA.
+
         </p>
-      </section>
 
-      <!-- PLANOS -->
-      <section id="tab-planos" class="tab-content hidden">
-        <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
-          <h3 class="text-lg font-bold">Planos</h3>
-          <button id="btn-add-plano" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
-            Novo Plano
-          </button>
-        </div>
+      </div>
 
-        <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead>
-              <tr class="border-b border-gray-600">
-                <th class="p-2">Nome</th>
-                <th class="p-2">Tipo</th>
-                <th class="p-2 text-right">Valor</th>
-                <th class="p-2">Status</th>
-                <th class="p-2">Criado por</th>
-                <th class="p-2 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="table-planos"></tbody>
-          </table>
-        </div>
 
-        <p class="text-xs text-gray-400 mt-3">
-          Inclui Mensal/Trimestral/Anual e “Zanco Total”. Valores são sempre por unidade.
-        </p>
-      </section>
 
-      <!-- LANÇAMENTOS -->
-      <section id="tab-lancamentos" class="tab-content hidden">
-        <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
-          <h3 class="text-lg font-bold">Lançamentos</h3>
-          <button id="btn-add-lancamento" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
-            Novo Lançamento
-          </button>
-        </div>
+      <nav class="flex flex-wrap gap-2 mb-6 no-print">
 
-        <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead>
-              <tr class="border-b border-gray-600">
-                <th class="p-2">Descrição</th>
-                <th class="p-2">Categoria</th>
-                <th class="p-2">Tipo</th>
-                <th class="p-2 text-right">Valor</th>
-                <th class="p-2">Vencimento</th>
-                <th class="p-2">Criado por</th>
-                <th class="p-2 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="table-lancamentos"></tbody>
-          </table>
-        </div>
+        <button data-tab="visaoGeral" class="tab-btn tab-active py-2 px-4 rounded-lg text-sm font-semibold">Visão Geral</button>
 
-        <p class="text-xs text-gray-400 mt-3">
-          Sugestões: Luz, Água, Internet, Impostos, Folha, Aluguel, Marketing, Manutenção, <b>Prestadores de Serviço</b>, Parceiros (TotalPass/Gympass)…
-        </p>
-      </section>
+        <button data-tab="alunos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Alunos</button>
 
-      <!-- RELATÓRIOS -->
-      <section id="tab-relatorios" class="tab-content hidden">
-        <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4">
-          <div class="flex flex-wrap items-end justify-between gap-3">
+        <button data-tab="funcionarios" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Funcionários</button>
+
+
+
+        <!-- ✅ NOVO -->
+
+        <button data-tab="prestadores" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Prestadores</button>
+
+
+
+        <button data-tab="planos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Planos</button>
+
+        <button data-tab="lancamentos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Lançamentos</button>
+
+
+
+        <!-- ✅ NOVO -->
+
+        <button data-tab="retiradas" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Retiradas</button>
+
+
+
+        <button data-tab="relatorios" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Relatórios</button>
+
+      </nav>
+
+
+
+      <main>
+
+
+
+        <!-- VISÃO GERAL -->
+
+        <section id="tab-visaoGeral" class="tab-content">
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+
+              <div class="text-sm text-gray-300 mb-1">Receita Bruta (mês)</div>
+
+              <div id="kpi-receita" class="text-3xl font-bold">R$ 0,00</div>
+
+            </div>
+
+            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+
+              <div class="text-sm text-gray-300 mb-1">Custo Total (mês)</div>
+
+              <div id="kpi-custo" class="text-3xl font-bold">R$ 0,00</div>
+
+            </div>
+
+            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+
+              <div class="text-sm text-gray-300 mb-1">Saldo (mês)</div>
+
+              <div id="kpi-saldo" class="text-3xl font-bold">R$ 0,00</div>
+
+            </div>
+
+          </div>
+
+
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <div class="bg-[#2d3748] p-4 rounded-xl shadow lg:col-span-2">
+
+              <h3 class="text-lg font-bold mb-3">Receita vs. Despesas (Mês Atual)</h3>
+
+              <canvas id="chart-receita-despesa"></canvas>
+
+            </div>
+
+            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+
+              <h3 class="text-lg font-bold mb-3">Top 5 Despesas (Mês Atual)</h3>
+
+              <canvas id="chart-despesas-top"></canvas>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+
+        <!-- ALUNOS -->
+
+        <section id="tab-alunos" class="tab-content hidden">
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+
+            <h3 class="text-lg font-bold">Alunos</h3>
+
+            <button id="btn-add-aluno" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
+
+              Novo Aluno
+
+            </button>
+
+          </div>
+
+
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+
+            <table class="w-full text-left text-sm">
+
+              <thead>
+
+                <tr class="border-b border-gray-600">
+
+                  <th class="p-2">Nome</th>
+
+                  <th class="p-2">Email</th>
+
+                  <th class="p-2">Status</th>
+
+                  <th class="p-2">Desde</th>
+
+                  <th class="p-2">Criado por</th>
+
+                  <th class="p-2 text-right">Ações</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="table-alunos"></tbody>
+
+            </table>
+
+          </div>
+
+        </section>
+
+
+
+        <!-- FUNCIONÁRIOS -->
+
+        <section id="tab-funcionarios" class="tab-content hidden">
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+
+            <h3 class="text-lg font-bold">Funcionários</h3>
+
+            <button id="btn-add-funcionario" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
+
+              Novo Funcionário
+
+            </button>
+
+          </div>
+
+
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+
+            <table class="w-full text-left text-sm">
+
+              <thead>
+
+                <tr class="border-b border-gray-600">
+
+                  <th class="p-2">Nome</th>
+
+                  <th class="p-2">Cargo</th>
+
+                  <th class="p-2">Desde</th>
+
+                  <th class="p-2 text-right">Salário</th>
+
+                  <th class="p-2">Criado por</th>
+
+                  <th class="p-2 text-right">Ações</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="table-funcionarios"></tbody>
+
+            </table>
+
+          </div>
+
+
+
+          <p class="text-xs text-gray-400 mt-3">
+
+            “Salário” aqui é por unidade selecionada (base + adicional desta unidade).
+
+          </p>
+
+        </section>
+
+
+
+        <!-- ✅ PRESTADORES -->
+
+        <section id="tab-prestadores" class="tab-content hidden">
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+
             <div>
-              <h3 class="text-lg font-bold">Relatórios por período</h3>
-              <p class="text-xs text-gray-400">Escolha “De…Até…” e gere financeiro + alunos no período. Dá para imprimir.</p>
+
+              <h3 class="text-lg font-bold">Prestadores de Serviço</h3>
+
+              <p class="text-xs text-gray-400">
+
+                Separe CLT (Funcionários) de Prestadores (Fixo/Temporário). Pode anexar foto/documentos para histórico.
+
+              </p>
+
             </div>
 
-            <div class="flex flex-wrap items-end gap-3 no-print">
-              <div>
-                <label class="text-xs text-gray-300">De</label>
-                <input id="rel-from" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white text-sm" />
-              </div>
-              <div>
-                <label class="text-xs text-gray-300">Até</label>
-                <input id="rel-to" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white text-sm" />
-              </div>
-              <button id="btn-rel-gerar" class="px-4 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">
-                Gerar
-              </button>
-              <button id="btn-rel-imprimir" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">
-                Imprimir
-              </button>
+            <button id="btn-add-prestador" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
+
+              Novo Prestador
+
+            </button>
+
+          </div>
+
+
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+
+            <table class="w-full text-left text-sm">
+
+              <thead>
+
+                <tr class="border-b border-gray-600">
+
+                  <th class="p-2">Nome</th>
+
+                  <th class="p-2">Tipo</th>
+
+                  <th class="p-2">Serviço</th>
+
+                  <th class="p-2">Período</th>
+
+                  <th class="p-2 text-right">Valor</th>
+
+                  <th class="p-2">Criado por</th>
+
+                  <th class="p-2 text-right">Ações</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="table-prestadores"></tbody>
+
+            </table>
+
+          </div>
+
+        </section>
+
+
+
+        <!-- PLANOS -->
+
+        <section id="tab-planos" class="tab-content hidden">
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+
+            <h3 class="text-lg font-bold">Planos</h3>
+
+            <button id="btn-add-plano" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
+
+              Novo Plano
+
+            </button>
+
+          </div>
+
+
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+
+            <table class="w-full text-left text-sm">
+
+              <thead>
+
+                <tr class="border-b border-gray-600">
+
+                  <th class="p-2">Nome</th>
+
+                  <th class="p-2">Tipo</th>
+
+                  <th class="p-2 text-right">Valor</th>
+
+                  <th class="p-2">Status</th>
+
+                  <th class="p-2">Criado por</th>
+
+                  <th class="p-2 text-right">Ações</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="table-planos"></tbody>
+
+            </table>
+
+          </div>
+
+
+
+          <p class="text-xs text-gray-400 mt-3">
+
+            Inclui Mensal/Trimestral/Anual e “Zanco Total”. Se quiser “Natação” e “Lutas”, crie planos específicos (ex.: “Mensal Natação”, “Mensal Lutas”).
+
+          </p>
+
+        </section>
+
+
+
+        <!-- LANÇAMENTOS -->
+
+        <section id="tab-lancamentos" class="tab-content hidden">
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+
+            <div>
+
+              <h3 class="text-lg font-bold">Lançamentos</h3>
+
+              <p class="text-xs text-gray-400">
+
+                Receitas/Despesas da unidade. Despesas podem ser CLT (Folha) ou Prestadores (Serviços).
+
+              </p>
+
             </div>
-          </div>
-        </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-            <div class="text-sm text-gray-300 mb-1">Receita (período)</div>
-            <div id="rel-receita" class="text-2xl font-bold">R$ 0,00</div>
-          </div>
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-            <div class="text-sm text-gray-300 mb-1">Despesas (período)</div>
-            <div id="rel-custo" class="text-2xl font-bold">R$ 0,00</div>
-          </div>
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-            <div class="text-sm text-gray-300 mb-1">Saldo (período)</div>
-            <div id="rel-saldo" class="text-2xl font-bold">R$ 0,00</div>
-          </div>
-        </div>
+            <button id="btn-add-lancamento" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
 
-        <div class="mt-6 bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-          <div class="flex items-center justify-between gap-3 mb-3">
-            <h4 class="font-bold">Lançamentos no período</h4>
-            <div class="text-xs text-gray-400" id="rel-info"></div>
-          </div>
-          <table class="w-full text-left text-sm">
-            <thead>
-              <tr class="border-b border-gray-600">
-                <th class="p-2">Data</th>
-                <th class="p-2">Tipo</th>
-                <th class="p-2">Categoria</th>
-                <th class="p-2">Descrição</th>
-                <th class="p-2 text-right">Valor</th>
-              </tr>
-            </thead>
-            <tbody id="rel-table-fin"></tbody>
-          </table>
-        </div>
+              Novo Lançamento
 
-        <div class="mt-6 bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-          <div class="flex items-center justify-between gap-3 mb-3">
-            <h4 class="font-bold">Alunos no período</h4>
-            <div class="text-xs text-gray-400" id="rel-alunos-info"></div>
+            </button>
+
           </div>
-          <table class="w-full text-left text-sm">
-            <thead>
-              <tr class="border-b border-gray-600">
-                <th class="p-2">Nome</th>
-                <th class="p-2">Status</th>
-                <th class="p-2">Desde</th>
-                <th class="p-2">Plano</th>
-              </tr>
-            </thead>
-            <tbody id="rel-table-alunos"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+
+
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+
+            <table class="w-full text-left text-sm">
+
+              <thead>
+
+                <tr class="border-b border-gray-600">
+
+                  <th class="p-2">Descrição</th>
+
+                  <th class="p-2">Categoria</th>
+
+                  <th class="p-2">Tipo</th>
+
+                  <th class="p-2 text-right">Valor</th>
+
+                  <th class="p-2">Vencimento</th>
+
+                  <th class="p-2">Criado por</th>
+
+                  <th class="p-2 text-right">Ações</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="table-lancamentos"></tbody>
+
+            </table>
+
+          </div>
+
+
+
+          <p class="text-xs text-gray-400 mt-3">
+
+            Sugestões: Luz, Água, Internet, Impostos, Folha, Aluguel, Marketing, Manutenção, <b>Prestadores de Serviço</b>, Parceiros (TotalPass/Gympass), Produtos/Loja…
+
+          </p>
+
+        </section>
+
+
+
+        <!-- ✅ RETIRADAS -->
+
+        <section id="tab-retiradas" class="tab-content hidden">
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+
+            <div>
+
+              <h3 class="text-lg font-bold">Retirada de Sócios</h3>
+
+              <p class="text-xs text-gray-400">
+
+                Sai do saldo/caixa, mas <b>não</b> entra como despesa operacional. Registre nome/data/valor e (opcional) comprovante.
+
+              </p>
+
+            </div>
+
+            <button id="btn-add-retirada" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
+
+              Nova Retirada
+
+            </button>
+
+          </div>
+
+
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+
+            <table class="w-full text-left text-sm">
+
+              <thead>
+
+                <tr class="border-b border-gray-600">
+
+                  <th class="p-2">Sócio</th>
+
+                  <th class="p-2">Data</th>
+
+                  <th class="p-2">Descrição</th>
+
+                  <th class="p-2 text-right">Valor</th>
+
+                  <th class="p-2">Criado por</th>
+
+                  <th class="p-2 text-right">Ações</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="table-retiradas"></tbody>
+
+            </table>
+
+          </div>
+
+        </section>
+
+
+
+        <!-- RELATÓRIOS -->
+
+        <section id="tab-relatorios" class="tab-content hidden">
+
+          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4">
+
+            <div class="flex flex-wrap items-end justify-between gap-3">
+
+              <div>
+
+                <h3 class="text-lg font-bold">Relatórios por período</h3>
+
+                <p class="text-xs text-gray-400">
+
+                  Tudo já é filtrado pela unidade selecionada. Escolha o tipo: Financeiro / Alunos / Completo.
+
+                </p>
+
+              </div>
+
+
+
+              <div class="flex flex-wrap items-end gap-3 no-print">
+
+                <div>
+
+                  <label class="text-xs text-gray-300">Tipo</label>
+
+                  <select id="rel-tipo" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white text-sm">
+
+                    <option value="COMPLETO">Completo (Financeiro + Alunos)</option>
+
+                    <option value="FINANCEIRO">Somente Financeiro</option>
+
+                    <option value="ALUNOS">Somente Alunos</option>
+
+                  </select>
+
+                </div>
+
+
+
+                <div>
+
+                  <label class="text-xs text-gray-300">De</label>
+
+                  <input id="rel-from" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white text-sm" />
+
+                </div>
+
+
+
+                <div>
+
+                  <label class="text-xs text-gray-300">Até</label>
+
+                  <input id="rel-to" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white text-sm" />
+
+                </div>
+
+
+
+                <div class="flex items-center gap-2">
+
+                  <input id="rel-incluir-retiradas" type="checkbox" class="w-4 h-4" checked />
+
+                  <label for="rel-incluir-retiradas" class="text-xs text-gray-300">Incluir retiradas</label>
+
+                </div>
+
+
+
+                <button id="btn-rel-gerar" class="px-4 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">
+
+                  Gerar
+
+                </button>
+
+                <button id="btn-rel-imprimir" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">
+
+                  Imprimir
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+
+          <!-- KPIs do período (financeiro) -->
+
+          <div id="rel-box-kpis" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+
+              <div class="text-sm text-gray-300 mb-1">Receita (período)</div>
+
+              <div id="rel-receita" class="text-2xl font-bold">R$ 0,00</div>
+
+            </div>
+
+            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+
+              <div class="text-sm text-gray-300 mb-1">Despesas (período)</div>
+
+              <div id="rel-custo" class="text-2xl font-bold">R$ 0,00</div>
+
+            </div>
+
+            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
+
+              <div class="text-sm text-gray-300 mb-1">Saldo (período)</div>
+
+              <div id="rel-saldo" class="text-2xl font-bold">R$ 0,00</div>
+
+            </div>
+
+          </div>
+
+
+
+          <!-- Financeiro -->
+
+          <div id="rel-box-fin" class="mt-6 bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+
+            <div class="flex items-center justify-between gap-3 mb-3">
+
+              <h4 class="font-bold">Financeiro no período</h4>
+
+              <div class="text-xs text-gray-400" id="rel-info"></div>
+
+            </div>
+
+            <table class="w-full text-left text-sm">
+
+              <thead>
+
+                <tr class="border-b border-gray-600">
+
+                  <th class="p-2">Data</th>
+
+                  <th class="p-2">Tipo</th>
+
+                  <th class="p-2">Categoria</th>
+
+                  <th class="p-2">Descrição</th>
+
+                  <th class="p-2 text-right">Valor</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="rel-table-fin"></tbody>
+
+            </table>
+
+          </div>
+
+
+
+          <!-- Alunos -->
+
+          <div id="rel-box-alunos" class="mt-6 bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
+
+            <div class="flex items-center justify-between gap-3 mb-3">
+
+              <h4 class="font-bold">Alunos no período</h4>
+
+              <div class="text-xs text-gray-400" id="rel-alunos-info"></div>
+
+            </div>
+
+            <table class="w-full text-left text-sm">
+
+              <thead>
+
+                <tr class="border-b border-gray-600">
+
+                  <th class="p-2">Nome</th>
+
+                  <th class="p-2">Status</th>
+
+                  <th class="p-2">Desde</th>
+
+                  <th class="p-2">Plano</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="rel-table-alunos"></tbody>
+
+            </table>
+
+          </div>
+
+        </section>
+
+
+
+      </main>
+
+    </div>
+
   </div>
 
-  <!-- DATALIST Planos (ajuda a digitar no aluno) -->
+
+
+  <!-- DATALISTS -->
+
   <datalist id="datalist-planos"></datalist>
 
+  <datalist id="datalist-prestadores"></datalist>
+
+  <datalist id="datalist-socios"></datalist>
+
+
+
   <!-- ========================= MODAL ALUNO ========================= -->
+
   <div id="modal-aluno" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
+
     <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
+
       <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
+
         <div>
+
           <h3 id="modal-aluno-title" class="text-lg font-bold text-white">Novo Aluno</h3>
+
           <p class="text-xs text-gray-400">Salvo na unidade selecionada. (Se plano existir, gera receita automática.)</p>
+
         </div>
+
         <button id="btn-close-modal-aluno" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Fechar</button>
+
       </div>
 
+
+
       <div class="p-4 flex-1 overflow-y-auto">
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
           <div class="lg:col-span-3">
+
             <div class="bg-[#111827] border border-gray-700 rounded-xl p-3">
+
               <div class="text-sm font-semibold mb-2">Foto (3x4)</div>
 
+
+
               <div class="w-full aspect-[3/4] bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+
                 <img id="aluno-foto-preview" alt="Foto 3x4" class="w-full h-full object-cover hidden" />
+
                 <div id="aluno-foto-placeholder" class="text-xs text-gray-400 px-3 text-center">Sem foto. Use “Tirar” ou “Anexar”.</div>
+
               </div>
+
+
 
               <div class="mt-3 flex flex-wrap gap-2">
+
                 <button id="btn-foto-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">Tirar</button>
+
                 <button id="btn-foto-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Anexar</button>
+
                 <button id="btn-foto-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
+
               </div>
 
+
+
               <p class="mt-2 text-[11px] text-gray-400">Corte central (3:4).</p>
+
+
 
               <input id="input-foto-camera" type="file" accept="image/*" capture="user" class="hidden" />
+
               <input id="input-foto-file" type="file" accept="image/*" class="hidden" />
+
             </div>
+
           </div>
+
+
 
           <div class="lg:col-span-9">
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
               <div>
+
                 <label class="text-sm text-gray-300">Nome completo *</label>
+
                 <input id="aluno-nome" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Nome do aluno" />
+
               </div>
+
               <div>
+
                 <label class="text-sm text-gray-300">Nascimento</label>
+
                 <input id="aluno-nascimento" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
+
               </div>
+
               <div>
+
                 <label class="text-sm text-gray-300">CPF</label>
+
                 <input id="aluno-cpf" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="CPF" />
+
               </div>
+
               <div>
+
                 <label class="text-sm text-gray-300">E-mail</label>
+
                 <input id="aluno-email" type="email" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="email@dominio.com" />
+
               </div>
+
               <div>
+
                 <label class="text-sm text-gray-300">Telefone principal</label>
+
                 <input id="aluno-tel1" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="(21) 99999-9999" />
+
               </div>
+
               <div>
+
                 <label class="text-sm text-gray-300">Telefone secundário</label>
+
                 <input id="aluno-tel2" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="(21) 99999-9999" />
+
               </div>
+
               <div class="md:col-span-2">
+
                 <label class="text-sm text-gray-300">Endereço</label>
+
                 <input id="aluno-endereco" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Rua, número, bairro, cidade" />
+
               </div>
+
               <div>
+
                 <label class="text-sm text-gray-300">Status</label>
+
                 <select id="aluno-status" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
+
                   <option value="Ativo">Ativo</option>
+
                   <option value="Trancado">Trancado</option>
+
                   <option value="Cancelado">Cancelado</option>
+
                 </select>
+
               </div>
+
               <div>
+
                 <label class="text-sm text-gray-300">Desde quando é aluno</label>
+
                 <input id="aluno-desde" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
+
                 <p class="mt-1 text-[11px] text-gray-400">Se vazio, usa a data de criação.</p>
+
               </div>
+
             </div>
 
+
+
             <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
+
               <div class="text-sm font-semibold">Plano</div>
+
               <div class="text-[11px] text-gray-400">Plano atual + histórico.</div>
 
+
+
               <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+
                 <div>
+
                   <label class="text-sm text-gray-300">Plano atual</label>
+
                   <input id="plano-atual-nome" list="datalist-planos" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Mensal, Trimestral..." />
+
                 </div>
+
                 <div>
+
                   <label class="text-sm text-gray-300">Início</label>
+
                   <input id="plano-atual-inicio" type="date" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" />
+
                 </div>
+
                 <div>
+
                   <label class="text-sm text-gray-300">Fim</label>
+
                   <input id="plano-atual-fim" type="date" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" />
+
                 </div>
+
               </div>
+
+
 
               <div class="mt-4 flex items-center justify-between">
+
                 <div class="text-sm font-semibold">Histórico de planos</div>
+
                 <button id="btn-add-hist" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">+ Adicionar</button>
+
               </div>
+
+
 
               <div id="hist-container" class="mt-3 space-y-2"></div>
+
             </div>
+
+
 
             <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
+
               <div class="flex items-center justify-between gap-3">
+
                 <div>
+
                   <div class="text-sm font-semibold">Documento (foto)</div>
+
                   <div class="text-[11px] text-gray-400">Identidade/comprovante.</div>
+
                 </div>
+
                 <div class="flex flex-wrap gap-2">
+
                   <button id="btn-doc-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">Tirar</button>
+
                   <button id="btn-doc-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Anexar</button>
+
                   <button id="btn-doc-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
+
                 </div>
+
               </div>
+
+
 
               <div class="mt-3 flex items-start gap-3">
+
                 <div class="w-28 h-28 bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+
                   <img id="aluno-doc-preview" alt="Documento" class="w-full h-full object-cover hidden" />
+
                   <div id="aluno-doc-placeholder" class="text-[11px] text-gray-400 px-2 text-center">Sem documento</div>
+
                 </div>
+
                 <div class="text-xs text-gray-300">
+
                   <div id="doc-info" class="text-gray-400">Nenhum documento anexado.</div>
+
                   <button id="btn-doc-abrir" class="mt-2 px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold hidden">Abrir</button>
+
                 </div>
+
+
 
                 <input id="input-doc-camera" type="file" accept="image/*" capture="environment" class="hidden" />
+
                 <input id="input-doc-file" type="file" accept="image/*" class="hidden" />
+
               </div>
+
             </div>
 
+
+
             <p id="modal-aluno-error" class="mt-3 text-sm text-red-300 hidden"></p>
+
           </div>
+
         </div>
+
       </div>
+
+
 
       <div class="flex items-center justify-between gap-2 p-4 border-t border-gray-700 bg-[#0b1220] rounded-b-2xl">
+
         <button id="btn-print-aluno" class="px-4 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Imprimir ficha</button>
+
         <div class="flex items-center gap-2">
+
           <button id="btn-cancel-modal-aluno" class="px-4 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Cancelar</button>
+
           <button id="btn-save-aluno" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">Salvar</button>
+
         </div>
+
       </div>
+
     </div>
+
   </div>
 
+
+
   <!-- ========================= MODAL FUNCIONÁRIO ========================= -->
+
   <div id="modal-func" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
+
     <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
+
       <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
+
         <div>
+
           <h3 id="modal-func-title" class="text-lg font-bold text-white">Novo Funcionário</h3>
+
           <p class="text-xs text-gray-400">Salvo na unidade selecionada. (Gera despesa automática do salário.)</p>
+
         </div>
+
         <button id="btn-close-modal-func" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Fechar</button>
+
       </div>
 
+
+
       <div class="p-4 flex-1 overflow-y-auto">
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
           <div class="lg:col-span-3">
+
             <div class="bg-[#111827] border border-gray-700 rounded-xl p-3">
+
               <div class="text-sm font-semibold mb-2">Foto (3x4)</div>
 
+
+
               <div class="w-full aspect-[3/4] bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+
                 <img id="func-foto-preview" alt="Foto 3x4" class="w-full h-full object-cover hidden" />
+
                 <div id="func-foto-placeholder" class="text-xs text-gray-400 px-3 text-center">Sem foto. Use “Tirar” ou “Anexar”.</div>
+
               </div>
 
+
+
               <div class="mt-3 flex flex-wrap gap-2">
+
                 <button id="btn-func-foto-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">Tirar</button>
+
                 <button id="btn-func-foto-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Anexar</button>
+
                 <button id="btn-func-foto-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
+
               </div>
+
+
 
               <p class="mt-2 text-[11px] text-gray-400">Corte central (3:4).</p>
 
+
+
               <input id="input-func-foto-camera" type="file" accept="image/*" capture="user" class="hidden" />
+
               <input id="input-func-foto-file" type="file" accept="image/*" class="hidden" />
+
             </div>
+
           </div>
+
+
 
           <div class="lg:col-span-9">
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
               <div>
+
                 <label class="text-sm text-gray-300">Nome *</label>
+
                 <input id="func-nome" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Nome do funcionário" />
+
               </div>
 
+
+
               <div>
+
                 <label class="text-sm text-gray-300">Cargo *</label>
+
                 <input id="func-cargo" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Recepção, Professor..." />
+
               </div>
 
+
+
               <div>
+
                 <label class="text-sm text-gray-300">Data de contratação</label>
+
                 <input id="func-contratado" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
+
                 <p class="mt-1 text-[11px] text-gray-400">Se vazio, usa a data de criação.</p>
+
               </div>
 
+
+
               <div>
+
                 <label class="text-sm text-gray-300">CPF</label>
+
                 <input id="func-cpf" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="CPF" />
+
               </div>
 
+
+
               <div>
+
                 <label class="text-sm text-gray-300">E-mail</label>
+
                 <input id="func-email" type="email" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="email@dominio.com" />
+
               </div>
 
+
+
               <div>
+
                 <label class="text-sm text-gray-300">Telefone</label>
+
                 <input id="func-tel1" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="(21) 99999-9999" />
+
               </div>
 
+
+
               <div class="md:col-span-2">
+
                 <label class="text-sm text-gray-300">Endereço</label>
+
                 <input id="func-endereco" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Rua, número, bairro, cidade" />
+
               </div>
 
+
+
               <div>
+
                 <label class="text-sm text-gray-300">Status</label>
+
                 <select id="func-status" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
+
                   <option value="Ativo">Ativo</option>
+
                   <option value="Afastado">Afastado</option>
+
                   <option value="Desligado">Desligado</option>
+
                 </select>
+
               </div>
 
+
+
               <div>
+
                 <label class="text-sm text-gray-300">Salário base (R$)</label>
+
                 <input id="func-salario-base" type="number" step="0.01" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: 1412" />
+
               </div>
 
+
+
               <div>
+
                 <label class="text-sm text-gray-300">Adicional desta unidade (R$)</label>
+
                 <input id="func-adicional" type="number" step="0.01" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: 150" />
+
               </div>
 
+
+
               <div>
+
                 <label class="text-sm text-gray-300">Salário total</label>
+
                 <input id="func-salario-total" disabled class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" />
+
               </div>
+
+
 
               <div class="md:col-span-2">
+
                 <label class="text-sm text-gray-300">Observações</label>
+
                 <input id="func-obs" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: escala, restrições, etc." />
+
               </div>
+
             </div>
+
+
 
             <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
+
               <div class="flex items-center justify-between gap-3">
+
                 <div>
+
                   <div class="text-sm font-semibold">Documento (foto)</div>
+
                   <div class="text-[11px] text-gray-400">Ex: atestado médico, documentos.</div>
+
                 </div>
+
                 <div class="flex flex-wrap gap-2">
+
                   <button id="btn-func-doc-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">Tirar</button>
+
                   <button id="btn-func-doc-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Anexar</button>
+
                   <button id="btn-func-doc-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
+
                 </div>
+
               </div>
+
+
 
               <div class="mt-3 flex items-start gap-3">
+
                 <div class="w-28 h-28 bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+
                   <img id="func-doc-preview" alt="Documento" class="w-full h-full object-cover hidden" />
+
                   <div id="func-doc-placeholder" class="text-[11px] text-gray-400 px-2 text-center">Sem documento</div>
+
                 </div>
+
                 <div class="text-xs text-gray-300">
+
                   <div id="func-doc-info" class="text-gray-400">Nenhum documento anexado.</div>
+
                   <button id="btn-func-doc-abrir" class="mt-2 px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold hidden">Abrir</button>
+
                 </div>
+
+
 
                 <input id="input-func-doc-camera" type="file" accept="image/*" capture="environment" class="hidden" />
+
                 <input id="input-func-doc-file" type="file" accept="image/*" class="hidden" />
+
               </div>
+
             </div>
+
+
 
             <p id="modal-func-error" class="mt-3 text-sm text-red-300 hidden"></p>
+
           </div>
+
         </div>
+
       </div>
+
+
 
       <div class="flex items-center justify-between gap-2 p-4 border-t border-gray-700 bg-[#0b1220] rounded-b-2xl">
+
         <button id="btn-print-func" class="px-4 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Imprimir ficha</button>
+
         <div class="flex items-center gap-2">
+
           <button id="btn-cancel-modal-func" class="px-4 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Cancelar</button>
+
           <button id="btn-save-func" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">Salvar</button>
+
         </div>
+
       </div>
+
     </div>
+
   </div>
 
-  <!-- ========================= MODAL PLANO ========================= -->
-  <div id="modal-plano" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-3xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
+
+
+  <!-- ========================= MODAL PRESTADOR ========================= -->
+
+  <div id="modal-prest" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
+
+    <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
+
       <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
+
         <div>
-          <h3 id="modal-plano-title" class="text-lg font-bold text-white">Novo Plano</h3>
-          <p class="text-xs text-gray-400">Valores são por unidade. “Zanco Total” é só um tipo de plano.</p>
+
+          <h3 id="modal-prest-title" class="text-lg font-bold text-white">Novo Prestador</h3>
+
+          <p class="text-xs text-gray-400">Fixo (contrato) ou Temporário (período). Pode salvar foto/documento.</p>
+
         </div>
-        <button id="btn-close-modal-plano" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Fechar</button>
+
+        <button id="btn-close-modal-prest" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Fechar</button>
+
       </div>
+
+
 
       <div class="p-4 flex-1 overflow-y-auto">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="text-sm text-gray-300">Nome do plano *</label>
-            <input id="plano-nome" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Mensal, Trimestral..." />
-          </div>
 
-          <div>
-            <label class="text-sm text-gray-300">Tipo *</label>
-            <select id="plano-tipo" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
-              <option value="Mensal">Mensal</option>
-              <option value="Trimestral">Trimestral</option>
-              <option value="Anual">Anual</option>
-              <option value="Zanco Total">Zanco Total</option>
-              <option value="Outro">Outro</option>
-            </select>
-          </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-          <div>
-            <label class="text-sm text-gray-300">Valor (R$) *</label>
-            <input id="plano-valor" type="number" step="0.01" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: 129.90" />
-          </div>
+          <div class="lg:col-span-3">
 
-          <div>
-            <label class="text-sm text-gray-300">Status</label>
-            <select id="plano-status" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
-              <option value="Ativo">Ativo</option>
-              <option value="Inativo">Inativo</option>
-            </select>
-          </div>
+            <div class="bg-[#111827] border border-gray-700 rounded-xl p-3">
 
-          <div class="md:col-span-2">
-            <label class="text-sm text-gray-300">Observações</label>
-            <input id="plano-obs" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Opcional" />
-          </div>
-        </div>
+              <div class="text-sm font-semibold mb-2">Foto (3x4)</div>
 
-        <p id="modal-plano-error" class="mt-3 text-sm text-red-300 hidden"></p>
-      </div>
 
-      <div class="flex items-center justify-end gap-2 p-4 border-t border-gray-700 bg-[#0b1220] rounded-b-2xl">
-        <button id="btn-cancel-modal-plano" class="px-4 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Cancelar</button>
-        <button id="btn-save-plano" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">Salvar</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- ========================= MODAL LANÇAMENTO ========================= -->
-  <div id="modal-lanc" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-3xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
-      <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
-        <div>
-          <h3 id="modal-lanc-title" class="text-lg font-bold text-white">Novo Lançamento</h3>
-          <p class="text-xs text-gray-400">Receitas e despesas da unidade. (Inclui Prestadores de Serviço.)</p>
-        </div>
-        <button id="btn-close-modal-lanc" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Fechar</button>
-      </div>
+              <div class="w-full aspect-[3/4] bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
 
-      <div class="p-4 flex-1 overflow-y-auto">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="text-sm text-gray-300">Tipo *</label>
-            <select id="lanc-tipo" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
-              <option value="DESPESA">DESPESA</option>
-              <option value="RECEITA">RECEITA</option>
-            </select>
-          </div>
+                <img id="prest-foto-preview" alt="Foto 3x4" class="w-full h-full object-cover hidden" />
 
-          <div>
-            <label class="text-sm text-gray-300">Categoria *</label>
-            <select id="lanc-categoria" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white"></select>
-          </div>
+                <div id="prest-foto-placeholder" class="text-xs text-gray-400 px-3 text-center">Sem foto.</div>
 
-          <div class="md:col-span-2">
-            <label class="text-sm text-gray-300">Descrição *</label>
-            <input id="lanc-descricao" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Conta de luz Nov/2025" />
-          </div>
+              </div>
 
-          <div class="md:col-span-2">
-            <label class="text-sm text-gray-300">Prestador/Fornecedor (opcional)</label>
-            <input id="lanc-fornecedor" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Eletricista João, Contador, Empresa X..." />
-            <p class="mt-1 text-[11px] text-gray-400">Use para despesas de prestadores (não funcionários).</p>
-          </div>
 
-          <div>
-            <label class="text-sm text-gray-300">Valor (R$) *</label>
-            <input id="lanc-valor" type="number" step="0.01" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="0,00" />
-          </div>
 
-          <div>
-            <label class="text-sm text-gray-300">Vencimento *</label>
-            <input id="lanc-venc" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
-          </div>
+              <div class="mt-3 flex flex-wrap gap-2">
 
-          <div class="md:col-span-2 flex items-center gap-3">
-            <input id="lanc-pago" type="checkbox" class="w-4 h-4" />
-            <label class="text-sm text-gray-300">Pago?</label>
-            <div class="flex-1">
-              <input id="lanc-pago-em" type="date" class="w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white text-sm" disabled />
-              <p class="text-[11px] text-gray-400 mt-1">Se marcar “Pago”, habilita a data de pagamento.</p>
+                <button id="btn-prest-foto-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">Tirar</button>
+
+                <button id="btn-prest-foto-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Anexar</button>
+
+                <button id="btn-prest-foto-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
+
+              </div>
+
+
+
+              <input id="input-prest-foto-camera" type="file" accept="image/*" capture="user" class="hidden" />
+
+              <input id="input-prest-foto-file" type="file" accept="image/*" class="hidden" />
+
             </div>
+
           </div>
 
-          <div class="md:col-span-2">
-            <label class="text-sm text-gray-300">Observações</label>
-            <input id="lanc-obs" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Opcional" />
-          </div>
-        </div>
-
-        <p id="modal-lanc-error" class="mt-3 text-sm text-red-300 hidden"></p>
-      </div>
-
-      <div class="flex items-center justify-end gap-2 p-4 border-t border-gray-700 bg-[#0b1220] rounded-b-2xl">
-        <button id="btn-cancel-modal-lanc" class="px-4 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Cancelar</button>
-        <button id="btn-save-lanc" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">Salvar</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // =========================
-    // FIREBASE
-    // =========================
-    const firebaseConfig = {
-      apiKey: "AIzaSyBEId876zarlIjEKYUz7ejnLhLcstnsHY7Y",
-      authDomain: "sistemadegestaobrabo.firebaseapp.com",
-      projectId: "sistemadegestaobrabo",
-      storageBucket: "sistemadegestaobrabo.firebasestorage.app",
-      messagingSenderId: "1050063988219",
-      appId: "1:1050063988219:web:d5a4b3d1305144840675e"
-    };
-
-    const allowedEmails = [
-      "thiagobrabobm@gmail.com",
-      "marlucezanco02@gmail.com"
-    ];
-
-    const UNITS = [
-      "Academia Zanco - Cordovil",
-      "Academia Zanco - Irajá 1",
-      "Academia Zanco - Irajá 2",
-      "Academia Zanco - Vila da Penha",
-      "Academia Zanco - Brás de Pina",
-      "Academia Zanco - Caxias"
-    ];
-
-    // Categorias sugeridas
-    const CATS_DESPESA = [
-      "Luz","Água","Internet/Telefone","Aluguel","Impostos",
-      "Folha de Pagamento","Prestadores de Serviço","Contabilidade","Manutenção","Marketing",
-      "Material de limpeza","Equipamentos","Outras"
-    ];
-    const CATS_RECEITA = [
-      "Mensalidades","Matrículas","Parceiros - TotalPass","Parceiros - Gympass","Produtos/Loja","Outras"
-    ];
-
-    let currentUser = null;
-    let selectedUnit = UNITS[0];
-    let db, auth;
-    let unsubscribers = [];
-
-    const state = { planos: [], alunos: [], funcionarios: [], lancamentos: [] };
-
-    let chartReceitaDespesa = null;
-    let chartTopDespesas = null;
-
-    // =========================
-    // UTIL
-    // =========================
-    function formatBRL(value) {
-      const n = Number(value || 0);
-      return n.toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
-    }
-
-    const fmtDate = (d) => {
-      if (!d) return "--";
-      const date = d instanceof Date ? d : new Date(d);
-      if (isNaN(date)) return "--";
-      return date.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
-    };
-    const fmtDateOnly = (d) => {
-      if (!d) return "--";
-      const date = d instanceof Date ? d : new Date(d);
-      if (isNaN(date)) return "--";
-      return date.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric" });
-    };
-    const todayISO = () => new Date().toISOString().slice(0,10);
-
-    function escapeHtml(str) {
-      return String(str || "").replace(/[&<>"']/g, (m) => ({
-        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-      }[m]));
-    }
-    function escapeAttr(str) { return String(str || "").replace(/"/g, "&quot;"); }
-
-    // ✅ CORRIGIDO: sem <script> dentro de template string (isso era o erro que “quebrava” e mostrava código na tela)
-    function openPrintWindow(title, bodyHtml) {
-      const w = window.open("", "_blank");
-      if (!w) return alert("Seu navegador bloqueou a janela de impressão.");
-
-      w.document.open();
-      w.document.write(`
-        <html><head><meta charset="utf-8"/>
-          <title>${escapeHtml(title)}</title>
-          <style>
-            body{font-family:Arial, sans-serif; padding:20px;}
-            h1{font-size:18px; margin:0 0 8px;}
-            .muted{color:#555; font-size:12px;}
-            table{width:100%; border-collapse:collapse; margin-top:12px;}
-            td,th{border:1px solid #ddd; padding:8px; font-size:12px; vertical-align:top;}
-            .grid{display:grid; grid-template-columns: 160px 1fr; gap:16px; align-items:start;}
-            img{max-width:160px; height:auto; border:1px solid #ddd;}
-            .block{border:1px solid #ddd; padding:12px; border-radius:8px; margin-top:12px;}
-          </style>
-        </head><body>
-          ${bodyHtml}
-        </body></html>
-      `);
-      w.document.close();
-
-      w.onload = () => {
-        try { w.focus(); w.print(); } catch (e) {}
-      };
-    }
-
-    function showLogin(message) {
-      document.getElementById("app")?.classList.add("hidden");
-      document.getElementById("login-screen")?.classList.remove("hidden");
-      const err = document.getElementById("login-error");
-      if (err) {
-        if (message) { err.textContent = message; err.classList.remove("hidden"); }
-        else { err.textContent = ""; err.classList.add("hidden"); }
-      }
-    }
-
-    function showApp() {
-      document.getElementById("login-screen")?.classList.add("hidden");
-      document.getElementById("app")?.classList.remove("hidden");
-    }
-
-    // =========================
-    // INIT FIREBASE
-    // =========================
-    function initFirebase() {
-      try {
-        if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
-        auth = firebase.auth();
-      } catch (e) {
-        console.error("[SGB] Firebase init:", e);
-        showLogin("Erro ao inicializar o Firebase. Verifique o console.");
-      }
-    }
-
-    // =========================
-    // AUTH
-    // =========================
-    function getUserEmailFromUrl() {
-      try {
-        const params = new URLSearchParams(window.location.search || "");
-        const email = params.get("userEmail");
-        return email ? email.trim().toLowerCase() : null;
-      } catch { return null; }
-    }
-
-    function setCurrentUser(email) {
-      currentUser = { email };
-      document.getElementById("user-email").textContent = email || "--";
-      showApp();
-    }
-
-    async function loginWithGoogle() {
-      try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        const res = await auth.signInWithPopup(provider);
-        const email = (res?.user?.email || "").toLowerCase();
-
-        if (!email) {
-          await auth.signOut();
-          return showLogin("Não foi possível obter o e-mail do Google.");
-        }
-        if (!allowedEmails.includes(email)) {
-          await auth.signOut();
-          return showLogin("Acesso negado: e-mail não autorizado.");
-        }
-
-        setCurrentUser(email);
-        startAfterLogin();
-      } catch (e) {
-        console.error("[SGB] login google:", e);
-        showLogin("Falha no login. Veja o console.");
-      }
-    }
-
-    function logout() {
-      unsubscribers.forEach((u) => u && u());
-      unsubscribers = [];
-      state.planos = []; state.alunos = []; state.funcionarios = []; state.lancamentos = [];
-      try { auth?.signOut?.(); } catch {}
-      currentUser = null;
-      showLogin("");
-    }
-
-    function getUnitRef() { return db.collection("unidades").doc(selectedUnit); }
-
-    // =========================
-    // LISTEN
-    // =========================
-    function listenUnit(unitId) {
-      unsubscribers.forEach((u) => u && u());
-      unsubscribers = [];
-
-      state.planos = [];
-      state.alunos = [];
-      state.funcionarios = [];
-      state.lancamentos = [];
-
-      const unitRef = db.collection("unidades").doc(unitId);
-
-      unsubscribers.push(
-        unitRef.collection("planos").onSnapshot((snap) => {
-          state.planos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          renderPlanos();
-          updatePlanosDatalist();
-        })
-      );
-
-      unsubscribers.push(
-        unitRef.collection("alunos").orderBy("createdAt", "desc").onSnapshot((snap) => {
-          state.alunos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          renderAlunos();
-          generateRelatorios();
-        })
-      );
-
-      unsubscribers.push(
-        unitRef.collection("funcionarios").onSnapshot((snap) => {
-          state.funcionarios = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          renderFuncionarios();
-        })
-      );
-
-      unsubscribers.push(
-        unitRef.collection("lancamentos").orderBy("dataVencimento", "desc").onSnapshot((snap) => {
-          state.lancamentos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          renderLancamentos();
-          updateKPIsAndCharts();
-          generateRelatorios();
-        })
-      );
-    }
-
-    // =========================
-    // UNITS SELECT
-    // =========================
-    function renderUnitsSelector() {
-      const sel = document.getElementById("unit-selector");
-      sel.innerHTML = "";
-      UNITS.forEach((u) => {
-        const opt = document.createElement("option");
-        opt.value = u;
-        opt.textContent = u;
-        if (u === selectedUnit) opt.selected = true;
-        sel.appendChild(opt);
-      });
-
-      sel.addEventListener("change", (e) => {
-        selectedUnit = e.target.value;
-        listenUnit(selectedUnit);
-      });
-    }
-
-    // =========================
-    // TABS
-    // =========================
-    function setupTabs() {
-      const tabButtons = document.querySelectorAll(".tab-btn");
-      const tabContents = document.querySelectorAll(".tab-content");
-
-      tabButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const tab = btn.getAttribute("data-tab");
-          tabButtons.forEach((b) => { b.classList.remove("tab-active"); b.classList.add("tab-inactive"); });
-          btn.classList.remove("tab-inactive");
-          btn.classList.add("tab-active");
-
-          tabContents.forEach((section) => {
-            if (section.id === "tab-" + tab) section.classList.remove("hidden");
-            else section.classList.add("hidden");
-          });
-        });
-      });
-    }
-
-    // =========================
-    // RENDER
-    // =========================
-    function updatePlanosDatalist() {
-      const dl = document.getElementById("datalist-planos");
-      if (!dl) return;
-      const names = [...new Set(state.planos.map(p => (p.nome_plano || "").trim()).filter(Boolean))];
-      dl.innerHTML = names.map(n => `<option value="${escapeAttr(n)}"></option>`).join("");
-    }
-
-    function renderAlunos() {
-      const tbody = document.getElementById("table-alunos");
-      tbody.innerHTML = "";
-      if (state.alunos.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-2 text-gray-400">Nenhum aluno cadastrado.</td></tr>`;
-        return;
-      }
-
-      state.alunos.forEach((a) => {
-        const createdAt = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) : null;
-        const desde = a.desde ? new Date(a.desde) : createdAt;
-
-        const tr = document.createElement("tr");
-        tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
-
-        const tdNome = `<td class="p-2">${escapeHtml(a.nome_completo || "--")}</td>`;
-        const tdEmail = `<td class="p-2">${escapeHtml(a.email || "--")}</td>`;
-        const tdStatus = `<td class="p-2">${escapeHtml(a.status_aluno || "Ativo")}</td>`;
-        const tdDesde = `<td class="p-2">${desde ? fmtDateOnly(desde) : "--"}</td>`;
-        const tdCriado = `<td class="p-2 text-xs text-gray-300">${escapeHtml(a.createdBy || "--")} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}</td>`;
-
-        const tdAcoes = document.createElement("td");
-        tdAcoes.className = "p-2 text-right";
-        const wrap = document.createElement("div");
-        wrap.className = "inline-flex gap-2";
-
-        const btnPrint = document.createElement("button");
-        btnPrint.className = "px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold";
-        btnPrint.textContent = "Imprimir";
-        btnPrint.addEventListener("click", () => printAlunoFicha(a));
-
-        const btnEdit = document.createElement("button");
-        btnEdit.className = "px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold";
-        btnEdit.textContent = "Editar";
-        btnEdit.addEventListener("click", () => openAlunoModal("edit", a));
-
-        const btnDel = document.createElement("button");
-        btnDel.className = "px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-xs font-semibold";
-        btnDel.textContent = "Excluir";
-        btnDel.addEventListener("click", () => deleteAluno(a));
-
-        wrap.appendChild(btnPrint);
-        wrap.appendChild(btnEdit);
-        wrap.appendChild(btnDel);
-        tdAcoes.appendChild(wrap);
-
-        tr.innerHTML = tdNome + tdEmail + tdStatus + tdDesde + tdCriado;
-        tr.appendChild(tdAcoes);
-        tbody.appendChild(tr);
-      });
-    }
-
-    function renderFuncionarios() {
-      const tbody = document.getElementById("table-funcionarios");
-      tbody.innerHTML = "";
-
-      if (state.funcionarios.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-2 text-gray-400">Nenhum funcionário cadastrado.</td></tr>`;
-        return;
-      }
-
-      state.funcionarios.forEach((f) => {
-        const createdAt = f.createdAt ? (f.createdAt.toDate ? f.createdAt.toDate() : f.createdAt) : null;
-        const desde = f.contratadoEm ? new Date(f.contratadoEm) : createdAt;
-
-        const base = Number(f.salario_base || 0);
-        const adicional = Number(f.adicional_unidade || 0);
-        const total = base + adicional;
-
-        const tr = document.createElement("tr");
-        tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
-
-        tr.innerHTML = `
-          <td class="p-2">${escapeHtml(f.nome || "--")}</td>
-          <td class="p-2">${escapeHtml(f.cargo || "--")}</td>
-          <td class="p-2">${desde ? fmtDateOnly(desde) : "--"}</td>
-          <td class="p-2 text-right">
-            <div class="font-semibold">${formatBRL(total)}</div>
-            <div class="text-[11px] text-gray-400">${formatBRL(base)} + ${formatBRL(adicional)}</div>
-          </td>
-          <td class="p-2 text-xs text-gray-300">${escapeHtml(f.createdBy || "--")} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}</td>
-        `;
-
-        const tdAcoes = document.createElement("td");
-        tdAcoes.className = "p-2 text-right";
-        const wrap = document.createElement("div");
-        wrap.className = "inline-flex gap-2";
-
-        const btnPrint = document.createElement("button");
-        btnPrint.className = "px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold";
-        btnPrint.textContent = "Imprimir";
-        btnPrint.addEventListener("click", () => printFuncFicha(f));
-
-        const btnEdit = document.createElement("button");
-        btnEdit.className = "px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold";
-        btnEdit.textContent = "Editar";
-        btnEdit.addEventListener("click", () => openFuncModal("edit", f));
-
-        const btnDel = document.createElement("button");
-        btnDel.className = "px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-xs font-semibold";
-        btnDel.textContent = "Excluir";
-        btnDel.addEventListener("click", () => deleteFuncionario(f));
-
-        wrap.appendChild(btnPrint);
-        wrap.appendChild(btnEdit);
-        wrap.appendChild(btnDel);
-        tdAcoes.appendChild(wrap);
-
-        tr.appendChild(tdAcoes);
-        tbody.appendChild(tr);
-      });
-    }
-
-    function renderPlanos() {
-      const tbody = document.getElementById("table-planos");
-      tbody.innerHTML = "";
-
-      if (state.planos.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-2 text-gray-400">Nenhum plano cadastrado.</td></tr>`;
-        return;
-      }
-
-      const plans = [...state.planos].sort((a,b)=> String(a.nome_plano||"").localeCompare(String(b.nome_plano||"")));
-
-      plans.forEach((p) => {
-        const createdAt = p.createdAt ? (p.createdAt.toDate ? p.createdAt.toDate() : p.createdAt) : null;
-
-        const tr = document.createElement("tr");
-        tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
-
-        tr.innerHTML = `
-          <td class="p-2">${escapeHtml(p.nome_plano || "--")}</td>
-          <td class="p-2">${escapeHtml(p.tipo || "—")}</td>
-          <td class="p-2 text-right">${formatBRL(p.valor)}</td>
-          <td class="p-2">${escapeHtml(p.status_plano || "Ativo")}</td>
-          <td class="p-2 text-xs text-gray-300">${escapeHtml(p.createdBy || "--")} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}</td>
-        `;
-
-        const tdAcoes = document.createElement("td");
-        tdAcoes.className = "p-2 text-right";
-        const wrap = document.createElement("div");
-        wrap.className = "inline-flex gap-2";
-
-        const btnEdit = document.createElement("button");
-        btnEdit.className = "px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold";
-        btnEdit.textContent = "Editar";
-        btnEdit.addEventListener("click", () => openPlanoModal("edit", p));
-
-        const btnDel = document.createElement("button");
-        btnDel.className = "px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-xs font-semibold";
-        btnDel.textContent = "Excluir";
-        btnDel.addEventListener("click", () => deletePlano(p));
-
-        wrap.appendChild(btnEdit);
-        wrap.appendChild(btnDel);
-        tdAcoes.appendChild(wrap);
-
-        tr.appendChild(tdAcoes);
-        tbody.appendChild(tr);
-      });
-    }
-
-    function renderLancamentos() {
-      const tbody = document.getElementById("table-lancamentos");
-      tbody.innerHTML = "";
-
-      if (state.lancamentos.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-2 text-gray-400">Nenhum lançamento cadastrado.</td></tr>`;
-        return;
-      }
-
-      state.lancamentos.forEach((l) => {
-        const createdAt = l.createdAt ? (l.createdAt.toDate ? l.createdAt.toDate() : l.createdAt) : null;
-
-        const valor = Number(l.valor || 0);
-        const tipo = l.tipo || "DESPESA";
-        const sinal = tipo === "DESPESA" ? "-" : "+";
-        const valorClass = tipo === "DESPESA" ? "text-red-300" : "text-green-300";
-        const forn = (l.fornecedor || "").trim();
-
-        const tr = document.createElement("tr");
-        tr.className = "border-b border-gray-700 hover:bg-gray-700/40";
-
-        tr.innerHTML = `
-          <td class="p-2">
-            ${escapeHtml(l.descricao || "--")}
-            ${forn ? `<div class="text-[11px] text-gray-400">Prestador: ${escapeHtml(forn)}</div>` : ``}
-            ${l.autoGerado ? `<span class="text-[10px] text-gray-400">(auto)</span>` : ""}
-          </td>
-          <td class="p-2">${escapeHtml(l.categoria || "--")}</td>
-          <td class="p-2">${escapeHtml(tipo)}</td>
-          <td class="p-2 text-right ${valorClass}">${sinal} ${formatBRL(valor)}</td>
-          <td class="p-2">${escapeHtml(l.dataVencimento || "--")}</td>
-          <td class="p-2 text-xs text-gray-300">${escapeHtml(l.createdBy || "--")} ${createdAt ? "(" + fmtDate(createdAt) + ")" : ""}</td>
-        `;
-
-        const tdAcoes = document.createElement("td");
-        tdAcoes.className = "p-2 text-right";
-        const wrap = document.createElement("div");
-        wrap.className = "inline-flex gap-2";
-
-        const btnEdit = document.createElement("button");
-        btnEdit.className = "px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold";
-        btnEdit.textContent = "Editar";
-        btnEdit.addEventListener("click", () => openLancModal("edit", l));
-
-        const btnDel = document.createElement("button");
-        btnDel.className = "px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-xs font-semibold";
-        btnDel.textContent = "Excluir";
-        btnDel.addEventListener("click", () => deleteLancamento(l));
-
-        wrap.appendChild(btnEdit);
-        wrap.appendChild(btnDel);
-        tdAcoes.appendChild(wrap);
-
-        tr.appendChild(tdAcoes);
-        tbody.appendChild(tr);
-      });
-    }
-
-    // =========================
-    // KPIs & CHARTS (mês atual)
-    // =========================
-    function inCurrentMonth(dateStr) {
-      if (!dateStr) return false;
-      const d = new Date(dateStr + "T00:00:00");
-      if (isNaN(d)) return false;
-      const now = new Date();
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    }
-
-    function updateKPIsAndCharts() {
-      const monthLanc = state.lancamentos.filter(l => inCurrentMonth(l.dataVencimento));
-
-      const receitaTotal = monthLanc.filter((l) => l.tipo === "RECEITA").reduce((acc, l) => acc + Number(l.valor || 0), 0);
-      const custoTotal = monthLanc.filter((l) => l.tipo === "DESPESA").reduce((acc, l) => acc + Number(l.valor || 0), 0);
-      const saldo = receitaTotal - custoTotal;
-
-      document.getElementById("kpi-receita").textContent = formatBRL(receitaTotal);
-      document.getElementById("kpi-custo").textContent = formatBRL(custoTotal);
-      document.getElementById("kpi-saldo").textContent = formatBRL(saldo);
-
-      const canvas1 = document.getElementById("chart-receita-despesa");
-      if (canvas1) {
-        const ctx1 = canvas1.getContext("2d");
-        if (chartReceitaDespesa) chartReceitaDespesa.destroy();
-        chartReceitaDespesa = new Chart(ctx1, {
-          type: "bar",
-          data: {
-            labels: ["Mês Atual"],
-            datasets: [
-              { label: "Receita", data: [receitaTotal], backgroundColor: "rgba(72, 187, 120, 0.7)" },
-              { label: "Despesas", data: [custoTotal], backgroundColor: "rgba(245, 101, 101, 0.7)" }
-            ]
-          },
-          options: { responsive: true }
-        });
-      }
-
-      const despesasGrouped = {};
-      monthLanc.filter((l) => l.tipo === "DESPESA").forEach((l) => {
-        const cat = l.categoria || "Outras";
-        despesasGrouped[cat] = (despesasGrouped[cat] || 0) + Number(l.valor || 0);
-      });
-
-      const top = Object.entries(despesasGrouped).sort((a,b)=>b[1]-a[1]).slice(0,5);
-
-      const canvas2 = document.getElementById("chart-despesas-top");
-      if (canvas2) {
-        const ctx2 = canvas2.getContext("2d");
-        if (chartTopDespesas) chartTopDespesas.destroy();
-        chartTopDespesas = new Chart(ctx2, {
-          type: "doughnut",
-          data: { labels: top.map(([k])=>k), datasets: [{ data: top.map(([,v])=>v) }] },
-          options: { responsive: true }
-        });
-      }
-    }
-
-    // =========================
-    // RELATÓRIOS
-    // =========================
-    function parseISODate(d) {
-      if (!d) return null;
-      const x = new Date(d + "T00:00:00");
-      return isNaN(x) ? null : x;
-    }
-
-    function between(dateStr, fromStr, toStr) {
-      const d = parseISODate(dateStr);
-      const f = parseISODate(fromStr);
-      const t = parseISODate(toStr);
-      if (!d || !f || !t) return false;
-      return d.getTime() >= f.getTime() && d.getTime() <= t.getTime();
-    }
-
-    function generateRelatorios() {
-      const from = document.getElementById("rel-from")?.value;
-      const to = document.getElementById("rel-to")?.value;
-      if (!from || !to) return;
-
-      const fin = state.lancamentos.filter(l => between(l.dataVencimento, from, to));
-      const receita = fin.filter(l => l.tipo === "RECEITA").reduce((a,l)=>a+Number(l.valor||0),0);
-      const desp = fin.filter(l => l.tipo === "DESPESA").reduce((a,l)=>a+Number(l.valor||0),0);
-      const saldo = receita - desp;
-
-      document.getElementById("rel-receita").textContent = formatBRL(receita);
-      document.getElementById("rel-custo").textContent = formatBRL(desp);
-      document.getElementById("rel-saldo").textContent = formatBRL(saldo);
-      document.getElementById("rel-info").textContent = `${fin.length} lançamentos (${from} até ${to})`;
-
-      const tbody = document.getElementById("rel-table-fin");
-      tbody.innerHTML = "";
-      if (fin.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-2 text-gray-400">Nenhum lançamento no período.</td></tr>`;
-      } else {
-        fin.slice(0,300).forEach(l => {
-          const valor = Number(l.valor||0);
-          const tipo = l.tipo || "--";
-          const sinal = tipo === "DESPESA" ? "-" : "+";
-          const cls = tipo === "DESPESA" ? "text-red-300" : "text-green-300";
-          const descExtra = (l.fornecedor || "").trim() ? ` (Prestador: ${l.fornecedor})` : "";
-          tbody.innerHTML += `
-            <tr class="border-b border-gray-700">
-              <td class="p-2">${escapeHtml(l.dataVencimento||"--")}</td>
-              <td class="p-2">${escapeHtml(tipo)}</td>
-              <td class="p-2">${escapeHtml(l.categoria||"--")}</td>
-              <td class="p-2">${escapeHtml((l.descricao||"--") + descExtra)}</td>
-              <td class="p-2 text-right ${cls}">${sinal} ${formatBRL(valor)}</td>
-            </tr>
-          `;
-        });
-      }
-
-      const alunosPeriodo = state.alunos.filter(a => {
-        const createdAt = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) : null;
-        const d = a.desde || (createdAt ? createdAt.toISOString().slice(0,10) : "");
-        return between(d, from, to);
-      });
-
-      document.getElementById("rel-alunos-info").textContent = `${alunosPeriodo.length} alunos (${from} até ${to})`;
-
-      const tbodyA = document.getElementById("rel-table-alunos");
-      tbodyA.innerHTML = "";
-      if (alunosPeriodo.length === 0) {
-        tbodyA.innerHTML = `<tr><td colspan="4" class="p-2 text-gray-400">Nenhum aluno no período.</td></tr>`;
-      } else {
-        alunosPeriodo.slice(0,300).forEach(a => {
-          const createdAt = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) : null;
-          const desde = a.desde ? new Date(a.desde) : createdAt;
-          tbodyA.innerHTML += `
-            <tr class="border-b border-gray-700">
-              <td class="p-2">${escapeHtml(a.nome_completo||"--")}</td>
-              <td class="p-2">${escapeHtml(a.status_aluno||"Ativo")}</td>
-              <td class="p-2">${desde ? fmtDateOnly(desde) : "--"}</td>
-              <td class="p-2">${escapeHtml(a.planoAtual?.nome || "")}</td>
-            </tr>
-          `;
-        });
-      }
-    }
-
-    function printRelatorios() {
-      const from = document.getElementById("rel-from")?.value;
-      const to = document.getElementById("rel-to")?.value;
-      if (!from || !to) return alert("Escolha as datas no relatório.");
-
-      const fin = state.lancamentos.filter(l => between(l.dataVencimento, from, to));
-      const receita = fin.filter(l => l.tipo === "RECEITA").reduce((a,l)=>a+Number(l.valor||0),0);
-      const desp = fin.filter(l => l.tipo === "DESPESA").reduce((a,l)=>a+Number(l.valor||0),0);
-      const saldo = receita - desp;
-
-      const rows = fin.map(l => {
-        const descExtra = (l.fornecedor || "").trim() ? ` (Prestador: ${l.fornecedor})` : "";
-        return `
-          <tr>
-            <td>${escapeHtml(l.dataVencimento||"--")}</td>
-            <td>${escapeHtml(l.tipo||"--")}</td>
-            <td>${escapeHtml(l.categoria||"--")}</td>
-            <td>${escapeHtml((l.descricao||"--") + descExtra)}</td>
-            <td style="text-align:right">${formatBRL(l.valor||0)}</td>
-          </tr>
-        `;
-      }).join("");
-
-      const alunosPeriodo = state.alunos.filter(a => {
-        const createdAt = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) : null;
-        const d = a.desde || (createdAt ? createdAt.toISOString().slice(0,10) : "");
-        return between(d, from, to);
-      });
-
-      const rowsA = alunosPeriodo.map(a => {
-        const createdAt = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) : null;
-        const desde = a.desde ? new Date(a.desde) : createdAt;
-        return `
-          <tr>
-            <td>${escapeHtml(a.nome_completo||"--")}</td>
-            <td>${escapeHtml(a.status_aluno||"Ativo")}</td>
-            <td>${desde ? fmtDateOnly(desde) : "--"}</td>
-            <td>${escapeHtml(a.planoAtual?.nome || "")}</td>
-          </tr>
-        `;
-      }).join("");
-
-      openPrintWindow("Relatório", `
-        <h1>Relatório - ${escapeHtml(selectedUnit)}</h1>
-        <div class="muted">Período: ${escapeHtml(from)} até ${escapeHtml(to)}</div>
-
-        <div class="block">
-          <b>Financeiro</b><br/>
-          Receita: ${formatBRL(receita)} | Despesas: ${formatBRL(desp)} | Saldo: ${formatBRL(saldo)}<br/>
-          <div class="muted">${fin.length} lançamentos</div>
-          <table>
-            <thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead>
-            <tbody>${rows || `<tr><td colspan="5">Sem lançamentos</td></tr>`}</tbody>
-          </table>
-        </div>
-
-        <div class="block">
-          <b>Alunos no período</b>
-          <div class="muted">${alunosPeriodo.length} alunos</div>
-          <table>
-            <thead><tr><th>Nome</th><th>Status</th><th>Desde</th><th>Plano</th></tr></thead>
-            <tbody>${rowsA || `<tr><td colspan="4">Sem alunos</td></tr>`}</tbody>
-          </table>
-        </div>
-      `);
-    }
-
-    // =========================
-    // IMAGENS
-    // =========================
-    const LIMIT_DOC_MAX_SIDE = 1280;
-    const MAX_DATAURL_CHARS = 850000;
-
-    function readFileAsImage(file) {
-      return new Promise((resolve, reject) => {
-        const fr = new FileReader();
-        fr.onload = () => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = fr.result;
-        };
-        fr.onerror = reject;
-        fr.readAsDataURL(file);
-      });
-    }
-    function canvasToJpegDataUrl(canvas, quality = 0.85) { return canvas.toDataURL("image/jpeg", quality); }
-
-    function centerCropToRatio(img, targetW, targetH, ratioW, ratioH) {
-      const srcW = img.naturalWidth, srcH = img.naturalHeight;
-      const targetRatio = ratioW / ratioH;
-      const srcRatio = srcW / srcH;
-
-      let cropW, cropH;
-      if (srcRatio > targetRatio) { cropH = srcH; cropW = Math.floor(srcH * targetRatio); }
-      else { cropW = srcW; cropH = Math.floor(srcW / targetRatio); }
-
-      const sx = Math.floor((srcW - cropW) / 2);
-      const sy = Math.floor((srcH - cropH) / 2);
-
-      const canvas = document.createElement("canvas");
-      canvas.width = targetW; canvas.height = targetH;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, targetW, targetH);
-      return canvas;
-    }
-
-    function resizeKeepAspect(img, maxSide) {
-      const srcW = img.naturalWidth, srcH = img.naturalHeight;
-      let outW = srcW, outH = srcH;
-      const maxSrc = Math.max(srcW, srcH);
-      if (maxSrc > maxSide) {
-        const scale = maxSide / maxSrc;
-        outW = Math.round(srcW * scale);
-        outH = Math.round(srcH * scale);
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = outW; canvas.height = outH;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, outW, outH);
-      return canvas;
-    }
-
-    async function handleFotoFile(file, onDone) {
-      try {
-        const img = await readFileAsImage(file);
-        const canvas = centerCropToRatio(img, 360, 480, 3, 4);
-        const dataUrl = canvasToJpegDataUrl(canvas, 0.85);
-        if (dataUrl.length > MAX_DATAURL_CHARS) return alert("Foto grande demais. Use menor.");
-        onDone(dataUrl);
-      } catch (e) { console.error(e); alert("Falha ao processar a foto."); }
-    }
-
-    async function handleDocFile(file, onDone) {
-      try {
-        const img = await readFileAsImage(file);
-        const canvas = resizeKeepAspect(img, LIMIT_DOC_MAX_SIDE);
-        const dataUrl = canvasToJpegDataUrl(canvas, 0.78);
-        if (dataUrl.length > MAX_DATAURL_CHARS) return alert("Documento grande demais. Use menor.");
-        onDone(dataUrl);
-      } catch (e) { console.error(e); alert("Falha ao processar o documento."); }
-    }
-
-    // =========================
-    // ALUNOS - MODAL
-    // =========================
-    function showModalError(msg) {
-      const el = document.getElementById("modal-aluno-error");
-      el.textContent = msg; el.classList.remove("hidden");
-    }
-    function clearModalError() {
-      const el = document.getElementById("modal-aluno-error");
-      el.textContent = ""; el.classList.add("hidden");
-    }
-
-    let alunoModalMode = "new";
-    let alunoEditingId = null;
-    let alunoFotoDataUrl = null;
-    let alunoDocDataUrl = null;
-    let histItems = [];
-
-    function openAlunoModal(mode, aluno=null) {
-      clearModalError();
-      alunoModalMode = mode;
-      alunoEditingId = aluno?.id || null;
-
-      document.getElementById("modal-aluno-title").textContent = mode === "edit" ? "Editar Aluno" : "Novo Aluno";
-
-      alunoFotoDataUrl = null; alunoDocDataUrl = null; histItems = [];
-      setFotoPreview(null); setDocPreview(null);
-
-      document.getElementById("aluno-nome").value = aluno?.nome_completo || "";
-      document.getElementById("aluno-nascimento").value = aluno?.nascimento || "";
-      document.getElementById("aluno-cpf").value = aluno?.cpf || "";
-      document.getElementById("aluno-endereco").value = aluno?.endereco || "";
-      document.getElementById("aluno-email").value = aluno?.email || "";
-      document.getElementById("aluno-tel1").value = aluno?.tel_principal || "";
-      document.getElementById("aluno-tel2").value = aluno?.tel_secundario || "";
-      document.getElementById("aluno-status").value = aluno?.status_aluno || "Ativo";
-      document.getElementById("aluno-desde").value = aluno?.desde || "";
-
-      document.getElementById("plano-atual-nome").value = aluno?.planoAtual?.nome || "";
-      document.getElementById("plano-atual-inicio").value = aluno?.planoAtual?.inicio || "";
-      document.getElementById("plano-atual-fim").value = aluno?.planoAtual?.fim || "";
-
-      const incomingHist = Array.isArray(aluno?.planosHistorico) ? aluno.planosHistorico : [];
-      histItems = incomingHist.map(x => ({ nome:x?.nome||"", inicio:x?.inicio||"", fim:x?.fim||"" }));
-      renderHist();
-
-      if (aluno?.foto3x4) { alunoFotoDataUrl = aluno.foto3x4; setFotoPreview(alunoFotoDataUrl); }
-      if (aluno?.docImagem) { alunoDocDataUrl = aluno.docImagem; setDocPreview(alunoDocDataUrl); }
-
-      const modal = document.getElementById("modal-aluno");
-      modal.classList.remove("hidden"); modal.classList.add("flex");
-    }
-
-    function closeAlunoModal() {
-      const modal = document.getElementById("modal-aluno");
-      modal.classList.add("hidden"); modal.classList.remove("flex");
-    }
-
-    function setFotoPreview(dataUrl) {
-      const img = document.getElementById("aluno-foto-preview");
-      const ph = document.getElementById("aluno-foto-placeholder");
-      if (!dataUrl) { img.classList.add("hidden"); img.src=""; ph.classList.remove("hidden"); return; }
-      img.src = dataUrl; img.classList.remove("hidden"); ph.classList.add("hidden");
-    }
-
-    function setDocPreview(dataUrl) {
-      const img = document.getElementById("aluno-doc-preview");
-      const ph = document.getElementById("aluno-doc-placeholder");
-      const info = document.getElementById("doc-info");
-      const btnAbrir = document.getElementById("btn-doc-abrir");
-
-      if (!dataUrl) {
-        img.classList.add("hidden"); img.src=""; ph.classList.remove("hidden");
-        info.textContent = "Nenhum documento anexado."; btnAbrir.classList.add("hidden");
-        return;
-      }
-      img.src = dataUrl; img.classList.remove("hidden"); ph.classList.add("hidden");
-      info.textContent = "Documento anexado."; btnAbrir.classList.remove("hidden");
-      btnAbrir.onclick = () => { const w=window.open(); if(!w) return; w.document.write(`<img src="${dataUrl}" style="max-width:100%;height:auto;" />`); };
-    }
-
-    function renderHist() {
-      const box = document.getElementById("hist-container");
-      box.innerHTML = "";
-
-      if (histItems.length === 0) {
-        box.innerHTML = `<div class="text-xs text-gray-400">Nenhum histórico adicionado.</div>`;
-        return;
-      }
-
-      histItems.forEach((item, idx) => {
-        const row = document.createElement("div");
-        row.className = "grid grid-cols-1 md:grid-cols-12 gap-2 bg-[#0b1220] border border-gray-700 rounded-lg p-2";
-
-        row.innerHTML = `
-          <div class="md:col-span-6">
-            <label class="text-[11px] text-gray-400">Plano</label>
-            <input data-hist="nome" data-idx="${idx}" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" value="${escapeAttr(item.nome)}" />
-          </div>
-          <div class="md:col-span-2">
-            <label class="text-[11px] text-gray-400">Início</label>
-            <input data-hist="inicio" data-idx="${idx}" type="date" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" value="${escapeAttr(item.inicio)}" />
-          </div>
-          <div class="md:col-span-2">
-            <label class="text-[11px] text-gray-400">Fim</label>
-            <input data-hist="fim" data-idx="${idx}" type="date" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" value="${escapeAttr(item.fim)}" />
-          </div>
-          <div class="md:col-span-2 flex items-end justify-end">
-            <button data-hist-del="${idx}" class="w-full md:w-auto px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
-          </div>
-        `;
-
-        box.appendChild(row);
-      });
-
-      box.querySelectorAll("input[data-hist]").forEach((inp) => {
-        inp.addEventListener("input", (e) => {
-          const idx = Number(e.target.getAttribute("data-idx"));
-          const key = e.target.getAttribute("data-hist");
-          histItems[idx][key] = e.target.value;
-        });
-      });
-
-      box.querySelectorAll("button[data-hist-del]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const idx = Number(btn.getAttribute("data-hist-del"));
-          histItems.splice(idx, 1);
-          renderHist();
-        });
-      });
-    }
-
-    function getAlunoPayloadFromModal() {
-      const nome = document.getElementById("aluno-nome").value.trim();
-      return {
-        nome_completo: nome,
-        nascimento: document.getElementById("aluno-nascimento").value || "",
-        cpf: document.getElementById("aluno-cpf").value.trim() || "",
-        endereco: document.getElementById("aluno-endereco").value.trim() || "",
-        email: (document.getElementById("aluno-email").value || "").trim(),
-        tel_principal: document.getElementById("aluno-tel1").value.trim() || "",
-        tel_secundario: document.getElementById("aluno-tel2").value.trim() || "",
-        status_aluno: document.getElementById("aluno-status").value || "Ativo",
-        desde: document.getElementById("aluno-desde").value || "",
-        planoAtual: {
-          nome: document.getElementById("plano-atual-nome").value.trim() || "",
-          inicio: document.getElementById("plano-atual-inicio").value || "",
-          fim: document.getElementById("plano-atual-fim").value || ""
-        },
-        planosHistorico: histItems
-          .map(x => ({ nome:(x.nome||"").trim(), inicio:x.inicio||"", fim:x.fim||"" }))
-          .filter(x => x.nome || x.inicio || x.fim),
-        foto3x4: alunoFotoDataUrl || "",
-        docImagem: alunoDocDataUrl || ""
-      };
-    }
-
-    function findPlanoByNome(nomePlano) {
-      const n = (nomePlano || "").trim().toLowerCase();
-      if (!n) return null;
-      return state.planos.find(x => String(x.nome_plano||"").trim().toLowerCase() === n) || null;
-    }
-
-    function findPlanoValorByNome(nomePlano) {
-      const p = findPlanoByNome(nomePlano);
-      if (!p) return null;
-      const v = Number(p.valor || 0);
-      return isNaN(v) ? null : v;
-    }
-
-    async function createLancamentoAuto({tipo, categoria, descricao, valor, ref}) {
-      if (!currentUser?.email) return;
-      if (!valor || Number(valor) <= 0) return;
-      await getUnitRef().collection("lancamentos").add({
-        tipo,
-        categoria,
-        descricao,
-        valor: Number(valor),
-        dataVencimento: todayISO(),
-        dataPagamento: null,
-        autoGerado: true,
-        origem: ref?.origem || "",
-        refId: ref?.id || "",
-        fornecedor: "",
-        createdBy: currentUser.email,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedBy: currentUser.email,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }
-
-    async function saveAlunoFromModal() {
-      clearModalError();
-      if (!currentUser?.email) return showModalError("Você não está logado.");
-
-      const payload = getAlunoPayloadFromModal();
-      if (!payload.nome_completo) return showModalError("Nome completo é obrigatório.");
-
-      if ((payload.foto3x4 && payload.foto3x4.length > MAX_DATAURL_CHARS) ||
-          (payload.docImagem && payload.docImagem.length > MAX_DATAURL_CHARS)) {
-        return showModalError("Imagem muito grande. Anexe novamente menor.");
-      }
-
-      const col = getUnitRef().collection("alunos");
-
-      try {
-        if (alunoModalMode === "new") {
-          const docRef = await col.add({
-            ...payload,
-            createdBy: currentUser.email,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedBy: currentUser.email,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-
-          const vPlano = findPlanoValorByNome(payload.planoAtual?.nome);
-          if (vPlano != null) {
-            await createLancamentoAuto({
-              tipo: "RECEITA",
-              categoria: "Mensalidades",
-              descricao: `Aluno: ${payload.nome_completo} - Plano: ${payload.planoAtual?.nome || ""}`,
-              valor: vPlano,
-              ref: { origem:"aluno", id: docRef.id }
-            });
-          }
-        } else {
-          if (!alunoEditingId) return showModalError("Erro interno: alunoEditingId ausente.");
-          await col.doc(alunoEditingId).update({
-            ...payload,
-            updatedBy: currentUser.email,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-
-        closeAlunoModal();
-      } catch (err) {
-        console.error("[SGB] salvar aluno:", err);
-        showModalError("Erro ao salvar. Veja o console.");
-      }
-    }
-
-    async function deleteAluno(aluno) {
-      if (!currentUser?.email) return alert("Faça login antes.");
-      if (!aluno?.id) return;
-
-      const ok = confirm(`Excluir o aluno "${aluno.nome_completo || ""}"?`);
-      if (!ok) return;
-
-      try { await getUnitRef().collection("alunos").doc(aluno.id).delete(); }
-      catch (err) { console.error(err); alert("Erro ao excluir. Veja o console."); }
-    }
-
-    function printAlunoFicha(aluno) {
-      const a = aluno || getAlunoPayloadFromModal();
-      const hist = Array.isArray(a.planosHistorico) ? a.planosHistorico : [];
-      const histRows = hist.map(h => `<tr><td>${escapeHtml(h.nome||"")}</td><td>${escapeHtml(h.inicio||"")}</td><td>${escapeHtml(h.fim||"")}</td></tr>`).join("");
-
-      openPrintWindow("Ficha do Aluno", `
-        <h1>Ficha do Aluno - ${escapeHtml(selectedUnit)}</h1>
-        <div class="muted">Gerado em: ${escapeHtml(new Date().toLocaleString("pt-BR"))}</div>
-
-        <div class="grid">
-          <div>${a.foto3x4 ? `<img src="${a.foto3x4}"/>` : `<div class="muted">Sem foto</div>`}</div>
-          <div>
-            <b>Nome:</b> ${escapeHtml(a.nome_completo||"")}<br/>
-            <b>Status:</b> ${escapeHtml(a.status_aluno||"")}<br/>
-            <b>Desde:</b> ${escapeHtml(a.desde||"")}<br/>
-            <b>CPF:</b> ${escapeHtml(a.cpf||"")}<br/>
-            <b>Nascimento:</b> ${escapeHtml(a.nascimento||"")}<br/>
-            <b>Email:</b> ${escapeHtml(a.email||"")}<br/>
-            <b>Telefone:</b> ${escapeHtml(a.tel_principal||"")} / ${escapeHtml(a.tel_secundario||"")}<br/>
-            <b>Endereço:</b> ${escapeHtml(a.endereco||"")}<br/>
-          </div>
-        </div>
-
-        <div class="block">
-          <b>Plano atual</b><br/>
-          ${escapeHtml(a.planoAtual?.nome||"")}<br/>
-          Início: ${escapeHtml(a.planoAtual?.inicio||"")} | Fim: ${escapeHtml(a.planoAtual?.fim||"")}
-        </div>
-
-        <div class="block">
-          <b>Histórico de planos</b>
-          <table>
-            <thead><tr><th>Plano</th><th>Início</th><th>Fim</th></tr></thead>
-            <tbody>${histRows || `<tr><td colspan="3">Sem histórico</td></tr>`}</tbody>
-          </table>
-        </div>
-
-        <div class="block">
-          <b>Documento</b><br/>
-          ${a.docImagem ? `<img src="${a.docImagem}"/>` : `<div class="muted">Sem documento</div>`}
-        </div>
-      `);
-    }
-
-    // =========================
-    // FUNCIONÁRIOS - MODAL
-    // =========================
-    function showFuncError(msg) {
-      const el = document.getElementById("modal-func-error");
-      el.textContent = msg; el.classList.remove("hidden");
-    }
-    function clearFuncError() {
-      const el = document.getElementById("modal-func-error");
-      el.textContent = ""; el.classList.add("hidden");
-    }
-
-    let funcModalMode = "new";
-    let funcEditingId = null;
-    let funcFotoDataUrl = null;
-    let funcDocDataUrl = null;
-
-    function setFuncFotoPreview(dataUrl) {
-      const img = document.getElementById("func-foto-preview");
-      const ph = document.getElementById("func-foto-placeholder");
-      if (!dataUrl) { img.classList.add("hidden"); img.src=""; ph.classList.remove("hidden"); return; }
-      img.src = dataUrl; img.classList.remove("hidden"); ph.classList.add("hidden");
-    }
-    function setFuncDocPreview(dataUrl) {
-      const img = document.getElementById("func-doc-preview");
-      const ph = document.getElementById("func-doc-placeholder");
-      const info = document.getElementById("func-doc-info");
-      const btnAbrir = document.getElementById("btn-func-doc-abrir");
-
-      if (!dataUrl) {
-        img.classList.add("hidden"); img.src=""; ph.classList.remove("hidden");
-        info.textContent = "Nenhum documento anexado."; btnAbrir.classList.add("hidden");
-        return;
-      }
-      img.src = dataUrl; img.classList.remove("hidden"); ph.classList.add("hidden");
-      info.textContent = "Documento anexado."; btnAbrir.classList.remove("hidden");
-      btnAbrir.onclick = () => { const w=window.open(); if(!w) return; w.document.write(`<img src="${dataUrl}" style="max-width:100%;height:auto;" />`); };
-    }
-
-    function updateFuncSalarioTotal() {
-      const base = Number(document.getElementById("func-salario-base").value || 0);
-      const add = Number(document.getElementById("func-adicional").value || 0);
-      document.getElementById("func-salario-total").value = formatBRL(base + add);
-    }
-
-    function openFuncModal(mode, func=null) {
-      clearFuncError();
-      funcModalMode = mode;
-      funcEditingId = func?.id || null;
-
-      document.getElementById("modal-func-title").textContent = mode === "edit" ? "Editar Funcionário" : "Novo Funcionário";
-
-      funcFotoDataUrl = null; funcDocDataUrl = null;
-      setFuncFotoPreview(null); setFuncDocPreview(null);
-
-      document.getElementById("func-nome").value = func?.nome || "";
-      document.getElementById("func-cargo").value = func?.cargo || "";
-      document.getElementById("func-contratado").value = func?.contratadoEm || "";
-      document.getElementById("func-cpf").value = func?.cpf || "";
-      document.getElementById("func-email").value = func?.email || "";
-      document.getElementById("func-tel1").value = func?.tel_principal || "";
-      document.getElementById("func-endereco").value = func?.endereco || "";
-      document.getElementById("func-status").value = func?.status_funcionario || "Ativo";
-      document.getElementById("func-salario-base").value = (func?.salario_base ?? "");
-      document.getElementById("func-adicional").value = (func?.adicional_unidade ?? "");
-      document.getElementById("func-obs").value = func?.obs || "";
-
-      if (func?.foto3x4) { funcFotoDataUrl = func.foto3x4; setFuncFotoPreview(funcFotoDataUrl); }
-      if (func?.docImagem) { funcDocDataUrl = func.docImagem; setFuncDocPreview(funcDocDataUrl); }
-
-      updateFuncSalarioTotal();
-
-      const modal = document.getElementById("modal-func");
-      modal.classList.remove("hidden"); modal.classList.add("flex");
-    }
-
-    function closeFuncModal() {
-      const modal = document.getElementById("modal-func");
-      modal.classList.add("hidden"); modal.classList.remove("flex");
-    }
-
-    function getFuncPayloadFromModal() {
-      const salarioBase = Number(document.getElementById("func-salario-base").value || 0);
-      const adicional = Number(document.getElementById("func-adicional").value || 0);
-
-      return {
-        nome: document.getElementById("func-nome").value.trim(),
-        cargo: document.getElementById("func-cargo").value.trim(),
-        contratadoEm: document.getElementById("func-contratado").value || "",
-        cpf: document.getElementById("func-cpf").value.trim() || "",
-        email: (document.getElementById("func-email").value || "").trim(),
-        tel_principal: document.getElementById("func-tel1").value.trim() || "",
-        endereco: document.getElementById("func-endereco").value.trim() || "",
-        status_funcionario: document.getElementById("func-status").value || "Ativo",
-        salario_base: salarioBase,
-        adicional_unidade: adicional,
-        obs: document.getElementById("func-obs").value.trim() || "",
-        foto3x4: funcFotoDataUrl || "",
-        docImagem: funcDocDataUrl || ""
-      };
-    }
-
-    async function saveFuncionarioFromModal() {
-      clearFuncError();
-      if (!currentUser?.email) return showFuncError("Você não está logado.");
-
-      const payload = getFuncPayloadFromModal();
-      if (!payload.nome) return showFuncError("Nome é obrigatório.");
-      if (!payload.cargo) return showFuncError("Cargo é obrigatório.");
-
-      if ((payload.foto3x4 && payload.foto3x4.length > MAX_DATAURL_CHARS) ||
-          (payload.docImagem && payload.docImagem.length > MAX_DATAURL_CHARS)) {
-        return showFuncError("Imagem muito grande. Anexe novamente menor.");
-      }
-
-      const col = getUnitRef().collection("funcionarios");
-
-      try {
-        if (funcModalMode === "new") {
-          const docRef = await col.add({
-            ...payload,
-            createdBy: currentUser.email,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedBy: currentUser.email,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-
-          const total = Number(payload.salario_base || 0) + Number(payload.adicional_unidade || 0);
-          if (total > 0) {
-            await createLancamentoAuto({
-              tipo: "DESPESA",
-              categoria: "Folha de Pagamento",
-              descricao: `Salário: ${payload.nome} (${payload.cargo})`,
-              valor: total,
-              ref: { origem:"funcionario", id: docRef.id }
-            });
-          }
-        } else {
-          if (!funcEditingId) return showFuncError("Erro interno: funcEditingId ausente.");
-          await col.doc(funcEditingId).update({
-            ...payload,
-            updatedBy: currentUser.email,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-
-        closeFuncModal();
-      } catch (err) {
-        console.error("[SGB] salvar func:", err);
-        showFuncError("Erro ao salvar. Veja o console.");
-      }
-    }
-
-    async function deleteFuncionario(func) {
-      if (!currentUser?.email) return alert("Faça login antes.");
-      if (!func?.id) return;
-
-      const ok = confirm(`Excluir o funcionário "${func.nome || ""}"?`);
-      if (!ok) return;
-
-      try { await getUnitRef().collection("funcionarios").doc(func.id).delete(); }
-      catch (err) { console.error(err); alert("Erro ao excluir. Veja o console."); }
-    }
-
-    function printFuncFicha(func) {
-      const f = func || getFuncPayloadFromModal();
-      const base = Number(f.salario_base||0), add = Number(f.adicional_unidade||0), total = base+add;
-
-      openPrintWindow("Ficha do Funcionário", `
-        <h1>Ficha do Funcionário - ${escapeHtml(selectedUnit)}</h1>
-        <div class="muted">Gerado em: ${escapeHtml(new Date().toLocaleString("pt-BR"))}</div>
-
-        <div class="grid">
-          <div>${f.foto3x4 ? `<img src="${f.foto3x4}"/>` : `<div class="muted">Sem foto</div>`}</div>
-          <div>
-            <b>Nome:</b> ${escapeHtml(f.nome||"")}<br/>
-            <b>Cargo:</b> ${escapeHtml(f.cargo||"")}<br/>
-            <b>Status:</b> ${escapeHtml(f.status_funcionario||"")}<br/>
-            <b>Contratado em:</b> ${escapeHtml(f.contratadoEm||"")}<br/>
-            <b>CPF:</b> ${escapeHtml(f.cpf||"")}<br/>
-            <b>Email:</b> ${escapeHtml(f.email||"")}<br/>
-            <b>Telefone:</b> ${escapeHtml(f.tel_principal||"")}<br/>
-            <b>Endereço:</b> ${escapeHtml(f.endereco||"")}<br/>
-            <b>Salário:</b> ${formatBRL(total)} (Base ${formatBRL(base)} + Adicional ${formatBRL(add)})<br/>
-            <b>Obs:</b> ${escapeHtml(f.obs||"")}<br/>
-          </div>
-        </div>
-
-        <div class="block">
-          <b>Documento</b><br/>
-          ${f.docImagem ? `<img src="${f.docImagem}"/>` : `<div class="muted">Sem documento</div>`}
-        </div>
-      `);
-    }
-
-    // =========================
-    // PLANOS - MODAL + CRUD
-    // =========================
-    function showPlanoError(msg) {
-      const el = document.getElementById("modal-plano-error");
-      el.textContent = msg; el.classList.remove("hidden");
-    }
-    function clearPlanoError() {
-      const el = document.getElementById("modal-plano-error");
-      el.textContent = ""; el.classList.add("hidden");
-    }
-
-    let planoModalMode = "new";
-    let planoEditingId = null;
-
-    function openPlanoModal(mode, plano=null) {
-      clearPlanoError();
-      planoModalMode = mode;
-      planoEditingId = plano?.id || null;
-
-      document.getElementById("modal-plano-title").textContent = mode === "edit" ? "Editar Plano" : "Novo Plano";
-
-      document.getElementById("plano-nome").value = plano?.nome_plano || "";
-      document.getElementById("plano-tipo").value = plano?.tipo || "Mensal";
-      document.getElementById("plano-valor").value = (plano?.valor ?? "");
-      document.getElementById("plano-status").value = plano?.status_plano || "Ativo";
-      document.getElementById("plano-obs").value = plano?.obs || "";
-
-      const modal = document.getElementById("modal-plano");
-      modal.classList.remove("hidden"); modal.classList.add("flex");
-    }
-
-    function closePlanoModal() {
-      const modal = document.getElementById("modal-plano");
-      modal.classList.add("hidden"); modal.classList.remove("flex");
-    }
-
-    async function savePlanoFromModal() {
-      clearPlanoError();
-      if (!currentUser?.email) return showPlanoError("Você não está logado.");
-
-      const nome = document.getElementById("plano-nome").value.trim();
-      const tipo = document.getElementById("plano-tipo").value;
-      const valor = Number(document.getElementById("plano-valor").value || 0);
-      const status = document.getElementById("plano-status").value || "Ativo";
-      const obs = document.getElementById("plano-obs").value.trim() || "";
-
-      if (!nome) return showPlanoError("Nome do plano é obrigatório.");
-      if (!tipo) return showPlanoError("Tipo é obrigatório.");
-      if (isNaN(valor) || valor <= 0) return showPlanoError("Valor inválido.");
-
-      const col = getUnitRef().collection("planos");
-
-      try {
-        if (planoModalMode === "new") {
-          await col.add({
-            nome_plano: nome,
-            tipo,
-            valor,
-            status_plano: status,
-            obs,
-            createdBy: currentUser.email,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedBy: currentUser.email,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        } else {
-          if (!planoEditingId) return showPlanoError("Erro interno: planoEditingId ausente.");
-          await col.doc(planoEditingId).update({
-            nome_plano: nome,
-            tipo,
-            valor,
-            status_plano: status,
-            obs,
-            updatedBy: currentUser.email,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-        closePlanoModal();
-      } catch (e) {
-        console.error(e);
-        showPlanoError("Erro ao salvar plano. Veja o console.");
-      }
-    }
-
-    async function deletePlano(plano) {
-      if (!currentUser?.email) return alert("Faça login antes.");
-      if (!plano?.id) return;
-      const ok = confirm(`Excluir o plano "${plano.nome_plano || ""}"?`);
-      if (!ok) return;
-
-      try { await getUnitRef().collection("planos").doc(plano.id).delete(); }
-      catch (e) { console.error(e); alert("Erro ao excluir plano."); }
-    }
-
-    // =========================
-    // LANÇAMENTOS - MODAL + CRUD
-    // =========================
-    function showLancError(msg) {
-      const el = document.getElementById("modal-lanc-error");
-      el.textContent = msg; el.classList.remove("hidden");
-    }
-    function clearLancError() {
-      const el = document.getElementById("modal-lanc-error");
-      el.textContent = ""; el.classList.add("hidden");
-    }
-
-    let lancModalMode = "new";
-    let lancEditingId = null;
-
-    function fillLancCategoriaOptions(tipo) {
-      const sel = document.getElementById("lanc-categoria");
-      const cats = (tipo === "RECEITA") ? CATS_RECEITA : CATS_DESPESA;
-      sel.innerHTML = cats.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join("");
-    }
-
-    function openLancModal(mode, lanc=null) {
-      clearLancError();
-      lancModalMode = mode;
-      lancEditingId = lanc?.id || null;
-
-      document.getElementById("modal-lanc-title").textContent = mode === "edit" ? "Editar Lançamento" : "Novo Lançamento";
-
-      const tipo = (lanc?.tipo || "DESPESA");
-      document.getElementById("lanc-tipo").value = tipo;
-      fillLancCategoriaOptions(tipo);
-      document.getElementById("lanc-categoria").value = lanc?.categoria || ((tipo==="RECEITA") ? "Mensalidades" : "Luz");
-
-      document.getElementById("lanc-descricao").value = lanc?.descricao || "";
-      document.getElementById("lanc-fornecedor").value = lanc?.fornecedor || "";
-      document.getElementById("lanc-valor").value = (lanc?.valor ?? "");
-      document.getElementById("lanc-venc").value = lanc?.dataVencimento || todayISO();
-
-      const pago = !!lanc?.dataPagamento;
-      document.getElementById("lanc-pago").checked = pago;
-      document.getElementById("lanc-pago-em").disabled = !pago;
-      document.getElementById("lanc-pago-em").value = lanc?.dataPagamento || "";
-
-      document.getElementById("lanc-obs").value = lanc?.obs || "";
-
-      const modal = document.getElementById("modal-lanc");
-      modal.classList.remove("hidden"); modal.classList.add("flex");
-    }
-
-    function closeLancModal() {
-      const modal = document.getElementById("modal-lanc");
-      modal.classList.add("hidden"); modal.classList.remove("flex");
-    }
-
-    async function saveLancFromModal() {
-      clearLancError();
-      if (!currentUser?.email) return showLancError("Você não está logado.");
-
-      const tipo = document.getElementById("lanc-tipo").value;
-      const categoria = document.getElementById("lanc-categoria").value;
-      const descricao = document.getElementById("lanc-descricao").value.trim();
-      const fornecedor = document.getElementById("lanc-fornecedor").value.trim() || "";
-      const valor = Number(document.getElementById("lanc-valor").value || 0);
-      const venc = document.getElementById("lanc-venc").value;
-      const pago = document.getElementById("lanc-pago").checked;
-      const pagoEm = document.getElementById("lanc-pago-em").value;
-      const obs = document.getElementById("lanc-obs").value.trim() || "";
-
-      if (!tipo || !["DESPESA","RECEITA"].includes(tipo)) return showLancError("Tipo inválido.");
-      if (!categoria) return showLancError("Categoria é obrigatória.");
-      if (!descricao) return showLancError("Descrição é obrigatória.");
-      if (isNaN(valor) || valor <= 0) return showLancError("Valor inválido.");
-      if (!venc) return showLancError("Vencimento é obrigatório.");
-      if (pago && !pagoEm) return showLancError("Informe a data de pagamento.");
-
-      const col = getUnitRef().collection("lancamentos");
-
-      try {
-        const data = {
-          tipo,
-          categoria,
-          descricao,
-          fornecedor,
-          valor,
-          dataVencimento: venc,
-          dataPagamento: pago ? pagoEm : null,
-          obs,
-          autoGerado: false,
-          updatedBy: currentUser.email,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        if (lancModalMode === "new") {
-          await col.add({
-            ...data,
-            createdBy: currentUser.email,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        } else {
-          if (!lancEditingId) return showLancError("Erro interno: lancEditingId ausente.");
-          await col.doc(lancEditingId).update(data);
-        }
-
-        closeLancModal();
-      } catch (e) {
-        console.error(e);
-        showLancError("Erro ao salvar lançamento. Veja o console.");
-      }
-    }
-
-    async function deleteLancamento(lanc) {
-      if (!currentUser?.email) return alert("Faça login antes.");
-      if (!lanc?.id) return;
-
-      const ok = confirm(`Excluir o lançamento "${lanc.descricao || ""}"?`);
-      if (!ok) return;
-
-      try { await getUnitRef().collection("lancamentos").doc(lanc.id).delete(); }
-      catch (e) { console.error(e); alert("Erro ao excluir lançamento."); }
-    }
-
-    // =========================
-    // START (APÓS LOGIN)
-    // =========================
-    let started = false;
-    function startAfterLogin() {
-      if (started) return;
-      started = true;
-
-      setupTabs();
-      renderUnitsSelector();
-      listenUnit(selectedUnit);
-
-      // Relatórios default (mês atual)
-      const now = new Date();
-      const first = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
-      document.getElementById("rel-from").value = first;
-      document.getElementById("rel-to").value = todayISO();
-
-      document.getElementById("btn-rel-gerar")?.addEventListener("click", generateRelatorios);
-      document.getElementById("btn-rel-imprimir")?.addEventListener("click", printRelatorios);
-
-      // ===== Alunos
-      document.getElementById("btn-add-aluno")?.addEventListener("click", () => openAlunoModal("new"));
-      document.getElementById("btn-close-modal-aluno")?.addEventListener("click", closeAlunoModal);
-      document.getElementById("btn-cancel-modal-aluno")?.addEventListener("click", closeAlunoModal);
-      document.getElementById("btn-save-aluno")?.addEventListener("click", saveAlunoFromModal);
-      document.getElementById("btn-print-aluno")?.addEventListener("click", () => printAlunoFicha(getAlunoPayloadFromModal()));
-      document.getElementById("btn-add-hist")?.addEventListener("click", () => { histItems.push({ nome:"", inicio:"", fim:"" }); renderHist(); });
-
-      const inputFotoCam = document.getElementById("input-foto-camera");
-      const inputFotoFile = document.getElementById("input-foto-file");
-      document.getElementById("btn-foto-tirar")?.addEventListener("click", () => inputFotoCam.click());
-      document.getElementById("btn-foto-anexar")?.addEventListener("click", () => inputFotoFile.click());
-      document.getElementById("btn-foto-remover")?.addEventListener("click", () => { alunoFotoDataUrl=null; setFotoPreview(null); });
-
-      inputFotoCam?.addEventListener("change", (e) => { const f=e.target.files?.[0]; e.target.value=""; if (f) handleFotoFile(f, (d)=>{ alunoFotoDataUrl=d; setFotoPreview(d); }); });
-      inputFotoFile?.addEventListener("change", (e) => { const f=e.target.files?.[0]; e.target.value=""; if (f) handleFotoFile(f, (d)=>{ alunoFotoDataUrl=d; setFotoPreview(d); }); });
-
-      const inputDocCam = document.getElementById("input-doc-camera");
-      const inputDocFile = document.getElementById("input-doc-file");
-      document.getElementById("btn-doc-tirar")?.addEventListener("click", () => inputDocCam.click());
-      document.getElementById("btn-doc-anexar")?.addEventListener("click", () => inputDocFile.click());
-      document.getElementById("btn-doc-remover")?.addEventListener("click", () => { alunoDocDataUrl=null; setDocPreview(null); });
-
-      inputDocCam?.addEventListener("change", (e) => { const f=e.target.files?.[0]; e.target.value=""; if (f) handleDocFile(f, (d)=>{ alunoDocDataUrl=d; setDocPreview(d); }); });
-      inputDocFile?.addEventListener("change", (e) => { const f=e.target.files?.[0]; e.target.value=""; if (f) handleDocFile(f, (d)=>{ alunoDocDataUrl=d; setDocPreview(d); }); });
-
-      document.getElementById("modal-aluno")?.addEventListener("click", (e) => { if (e.target.id === "modal-aluno") closeAlunoModal(); });
-
-      // ===== Funcionários
-      document.getElementById("btn-add-funcionario")?.addEventListener("click", () => openFuncModal("new"));
-      document.getElementById("btn-close-modal-func")?.addEventListener("click", closeFuncModal);
-      document.getElementById("btn-cancel-modal-func")?.addEventListener("click", closeFuncModal);
-      document.getElementById("btn-save-func")?.addEventListener("click", saveFuncionarioFromModal);
-      document.getElementById("btn-print-func")?.addEventListener("click", () => printFuncFicha(getFuncPayloadFromModal()));
-
-      document.getElementById("func-salario-base")?.addEventListener("input", updateFuncSalarioTotal);
-      document.getElementById("func-adicional")?.addEventListener("input", updateFuncSalarioTotal);
-
-      const inputFuncFotoCam = document.getElementById("input-func-foto-camera");
-      const inputFuncFotoFile = document.getElementById("input-func-foto-file");
-      document.getElementById("btn-func-foto-tirar")?.addEventListener("click", () => inputFuncFotoCam.click());
-      document.getElementById("btn-func-foto-anexar")?.addEventListener("click", () => inputFuncFotoFile.click());
-      document.getElementById("btn-func-foto-remover")?.addEventListener("click", () => { funcFotoDataUrl=null; setFuncFotoPreview(null); });
-
-      inputFuncFotoCam?.addEventListener("change", (e) => { const f=e.target.files?.[0]; e.target.value=""; if (f) handleFotoFile(f, (d)=>{ funcFotoDataUrl=d; setFuncFotoPreview(d); }); });
-      inputFuncFotoFile?.addEventListener("change", (e) => { const f=e.target.files?.[0]; e.target.value=""; if (f) handleFotoFile(f, (d)=>{ funcFotoDataUrl=d; setFuncFotoPreview(d); }); });
-
-      const inputFuncDocCam = document.getElementById("input-func-doc-camera");
-      const inputFuncDocFile = document.getElementById("input-func-doc-file");
-      document.getElementById("btn-func-doc-tirar")?.addEventListener("click", () => inputFuncDocCam.click());
-      document.getElementById("btn-func-doc-anexar")?.addEventListener("click", () => inputFuncDocFile.click());
-      document.getElementById("btn-func-doc-remover")?.addEventListener("click", () => { funcDocDataUrl=null; setFuncDocPreview(null); });
-
-      inputFuncDocCam?.addEventListener("change", (e) => { const f=e.target.files?.[0]; e.target.value=""; if (f) handleDocFile(f, (d)=>{ funcDocDataUrl=d; setFuncDocPreview(d); }); });
-      inputFuncDocFile?.addEventListener("change", (e) => { const f=e.target.files?.[0]; e.target.value=""; if (f) handleDocFile(f, (d)=>{ funcDocDataUrl=d; setFuncDocPreview(d); }); });
-
-      document.getElementById("modal-func")?.addEventListener("click", (e) => { if (e.target.id === "modal-func") closeFuncModal(); });
-
-      // ===== Planos
-      document.getElementById("btn-add-plano")?.addEventListener("click", () => openPlanoModal("new"));
-      document.getElementById("btn-close-modal-plano")?.addEventListener("click", closePlanoModal);
-      document.getElementById("btn-cancel-modal-plano")?.addEventListener("click", closePlanoModal);
-      document.getElementById("btn-save-plano")?.addEventListener("click", savePlanoFromModal);
-      document.getElementById("modal-plano")?.addEventListener("click", (e) => { if (e.target.id === "modal-plano") closePlanoModal(); });
-
-      // ===== Lançamentos
-      document.getElementById("btn-add-lancamento")?.addEventListener("click", () => openLancModal("new", { tipo:"DESPESA", dataVencimento: todayISO() }));
-      document.getElementById("btn-close-modal-lanc")?.addEventListener("click", closeLancModal);
-      document.getElementById("btn-cancel-modal-lanc")?.addEventListener("click", closeLancModal);
-      document.getElementById("btn-save-lanc")?.addEventListener("click", saveLancFromModal);
-      document.getElementById("modal-lanc")?.addEventListener("click", (e) => { if (e.target.id === "modal-lanc") closeLancModal(); });
-
-      document.getElementById("lanc-tipo")?.addEventListener("change", (e) => {
-        fillLancCategoriaOptions(e.target.value);
-      });
-
-      document.getElementById("lanc-pago")?.addEventListener("change", (e) => {
-        const checked = e.target.checked;
-        const inp = document.getElementById("lanc-pago-em");
-        inp.disabled = !checked;
-        if (checked && !inp.value) inp.value = todayISO();
-        if (!checked) inp.value = "";
-      });
-
-      fillLancCategoriaOptions("DESPESA");
-      generateRelatorios();
-      updateKPIsAndCharts();
-    }
-
-    // =========================
-    // BOOT
-    // =========================
-    document.addEventListener("DOMContentLoaded", () => {
-      initFirebase();
-
-      document.getElementById("btn-logout")?.addEventListener("click", logout);
-
-      const btnGoogle = document.getElementById("btn-login-google");
-      btnGoogle?.addEventListener("click", loginWithGoogle);
-
-      const emailFromUrl = getUserEmailFromUrl();
-      const btnContinue = document.getElementById("btn-login-continue");
-      if (emailFromUrl && allowedEmails.includes(emailFromUrl)) {
-        btnContinue.classList.remove("hidden");
-        btnContinue.textContent = `Continuar como ${emailFromUrl}`;
-        btnContinue.addEventListener("click", () => {
-          setCurrentUser(emailFromUrl);
-          startAfterLogin();
-        });
-      }
-
-      showLogin("");
-    });
-  </script>
-</body>
-</html>
+
+
+          <div class="lg:col-span-9">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              <div>
+
+                <label class="text-sm text-gray-300">Nome *</label>
+
+                <input id="prest-nome" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Nome do prestador" />
+
+              </div>
+
+
+
+              <div>
+
+                <label class="text-sm text-gray-300">Tipo *</label>
+
+                <select id="prest-tipo" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
+
+                  <option value="FIXO">FIXO (Contrato)</option>
+
+                  <option value="TEMPORARIO">TEMPORÁRIO (Período)</option>
+
+                </select>
+
+              </div>
+
+
+
+              <div>
+
+                <label class="text-sm text-gray-300">Serviço *</label>
+
+                <input id="prest-servico" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Eletricista, Contador, Manutenção..." />
+
+              </div>
+
+
+
+              <div>
+
+                <label class="text-sm text-gray-300">Contato</label>
+
+                <input id="prest-contato" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Telefone / e-mail" />
+
+              </div>
+
+
+
+              <div>
+
+                <label class="text-sm text-gray-300">Documento (CPF/CNPJ)</label>
+
+                <input id="prest-doc" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="CPF ou CNPJ" />
+
+              </div>
+
+
+
+              <div>
+
+                <label class="text-sm text-gray-300">Status</label>
+
+                <select id="prest-status" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
+
+                  <option value="ATIVO">Ativo</option>
+
+                  <option value="INATIVO">Inativo</option>
+
+                </select>
+
+              </div>
+
+
+
+              <div>
+
+                <label class="text-sm text-gray-300">Início</label>
+
+                <input id="prest-inicio" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
+
+              </div>
+
+
+
+              <div>
+
+                <label class="text-sm text-gray-300">Fim (temporário)</label>
+
+                <input id="prest-fim" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
+
+              </div>
+
+
+
+              <div>
+
+                <label class="text-sm text-gray-300">Valor (R$)</label>
+
+                <input id="prest-valor" type="number" step="0.01" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Opcional" />
+
+              </div>
+
+
+
+              <div class="md:col-span-2">
+
+                <label class="text-sm text-gray-300">Observações</label>
+
+                <input id="prest-obs" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Opcional" />
+
+              </div>
+
+            </div>
+
+
+
+            <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
+
+              <div class="flex items-center justify-between gap-3">
+
+                <div>
+
+                  <div class="text-sm font-semibold">Documento (foto)</div>
+
+                  <div class="text-[11px] text-gray-400">Contrato, recibo, identidade, etc.</div>
+
+                </div>
