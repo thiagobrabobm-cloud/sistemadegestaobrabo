@@ -1,1699 +1,2134 @@
 <!DOCTYPE html>
-
 <html lang="pt-BR">
-
 <head>
-
   <meta charset="UTF-8" />
-
   <title>SISTEMA DE GESTÃO BRABO v5.0</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-
-
   <script src="https://cdn.tailwindcss.com"></script>
-
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-
-
+  <!-- Firebase compat -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 
-  <!-- ✅ NOVO (para anexos online no Storage, sem quebrar o que já existe) -->
-
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
-
-
-
   <style>
-
-    body { background-color:#1a202c; color:#e2e8f0; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-
-    .tab-active { background-color:#4299e1; color:white; }
-
-    .tab-inactive { background-color:#2d3748; color:#e2e8f0; }
-
-    .tab-inactive:hover { background-color:#4a5568; }
-
-
-
-    /* Topbar */
-
-    .topbar-blur { backdrop-filter: blur(10px); }
-
-
-
-    /* Print */
-
-    @media print {
-
-      .no-print { display:none !important; }
-
-      body { background:#fff !important; color:#111 !important; }
-
-      #app { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
-
-      .print-page { padding: 18px !important; }
-
-      .print-card { border: 1px solid #ddd !important; border-radius: 8px !important; padding: 12px !important; margin-bottom: 12px !important; }
-
-      .print-muted { color:#555 !important; font-size: 12px !important; }
-
-    }
-
+    /* Só pra garantir o “feeling” do app e evitar quebrar layout em telas pequenas */
+    .tab-btn.active { background: rgba(255,255,255,0.08); }
+    .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
+    .mono { font-variant-numeric: tabular-nums; }
   </style>
-
 </head>
 
-
-
-<body class="min-h-screen">
-
-
-
-  <!-- LOGIN (ANTES DE LOGAR) -->
-
-  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
-
-    <div class="bg-[#0f172a] border border-gray-700 p-8 rounded-2xl max-w-lg w-full shadow-2xl text-center">
-
-      <h1 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">SISTEMA DE GESTÃO BRABO v5.0</h1>
-
-      <p class="text-sm text-gray-300 mb-6">
-
-        Entre para acessar o sistema. (Somente e-mails autorizados.)
-
-      </p>
-
-
-
-      <div id="login-actions" class="space-y-3">
-
-        <button id="btn-login-google"
-
-          class="w-full py-4 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-extrabold text-lg shadow">
-
-          Entrar com Google
-
-        </button>
-
-
-
-        <button id="btn-login-continue"
-
-          class="w-full py-4 rounded-xl bg-[#334155] hover:bg-[#475569] text-white font-extrabold text-lg shadow hidden">
-
-          Continuar
-
-        </button>
-
-
-
-        <p class="text-xs text-gray-400">
-
-          Dica: se você já entra pelo /dashboard e ele passa <b>userEmail</b>, o botão “Continuar” aparece automaticamente.
-
-        </p>
-
+<body class="bg-zinc-950 text-zinc-100 min-h-screen">
+  <!-- LOGIN -->
+  <div id="loginView" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md card rounded-2xl p-6 shadow-lg">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-2xl font-bold">SGB v5.0</div>
+          <div class="text-sm text-zinc-400">Login Google (sem modo visitante)</div>
+        </div>
+        <div class="text-xs px-2 py-1 rounded-lg bg-zinc-800/60 border border-zinc-700/60">Firebase</div>
       </div>
 
+      <div class="mt-4 text-sm text-zinc-300">
+        Use o botão abaixo para entrar. Apenas e-mails autorizados podem acessar.
+      </div>
 
+      <div id="loginError" class="mt-3 hidden text-sm text-red-300 bg-red-950/40 border border-red-900/40 rounded-xl p-3"></div>
 
-      <p id="login-error" class="text-sm text-red-300 mt-4 hidden"></p>
+      <div class="mt-4 flex gap-2">
+        <button id="btnLoginGoogle" class="w-full px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
+          Entrar com Google
+        </button>
+      </div>
 
+      <div class="mt-4 text-xs text-zinc-500">
+        Dica: se o login falhar no Vercel, confira <b>Authorized domains</b> no Firebase Auth.
+      </div>
     </div>
-
   </div>
-
-
 
   <!-- APP -->
-
-  <div id="app" class="hidden">
-
-
-
-    <!-- ✅ TOPBAR ÚNICO (remove duplicidade de Logado/Sair dentro do app) -->
-
-    <header class="no-print sticky top-0 z-40 border-b border-gray-700 bg-[#0b1220]/90 topbar-blur">
-
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
-
+  <div id="appView" class="hidden min-h-screen">
+    <!-- TOPBAR -->
+    <div class="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
+      <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center sm:justify-between">
         <div class="flex items-center gap-3">
-
-          <div class="w-9 h-9 rounded-xl bg-[#111827] border border-gray-700 flex items-center justify-center font-black text-white">
-
-            SGB
-
-          </div>
-
-          <div>
-
-            <div class="text-white font-extrabold leading-tight">SISTEMA DE GESTÃO BRABO</div>
-
-            <div class="text-xs text-gray-400 leading-tight">v5.0</div>
-
-          </div>
-
+          <div class="text-lg font-bold">SISTEMA DE GESTÃO BRABO</div>
+          <div class="text-xs px-2 py-1 rounded-lg bg-zinc-800/60 border border-zinc-700/60">v5.0</div>
         </div>
 
-
-
-        <div class="flex flex-wrap items-center gap-3">
-
-          <div class="flex items-center gap-2">
-
-            <span class="text-xs text-gray-400">Unidade:</span>
-
-            <select id="unit-selector" class="bg-[#111827] border border-gray-700 text-white text-sm rounded-lg p-2"></select>
-
+        <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div class="text-xs text-zinc-300">
+            Logado como: <span id="userEmail" class="font-semibold"></span>
           </div>
 
+          <div class="flex gap-2 items-center">
+            <label class="text-xs text-zinc-400">Unidade</label>
+            <select id="unitSelect" class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm">
+            </select>
 
-
-          <div class="hidden sm:block h-8 w-px bg-gray-700"></div>
-
-
-
-          <div class="flex items-center gap-2">
-
-            <div class="text-sm text-gray-300">
-
-              Logado como: <span id="user-email" class="text-white font-semibold">--</span>
-
-            </div>
-
-            <button id="btn-logout" class="px-4 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">
-
+            <button id="btnLogout" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm">
               Sair
-
             </button>
+          </div>
+        </div>
+      </div>
 
+      <!-- TABS -->
+      <div class="max-w-7xl mx-auto px-3 sm:px-4 pb-3">
+        <div class="flex flex-wrap gap-2">
+          <button class="tab-btn px-3 py-2 rounded-xl text-sm bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition" data-tab="overview">Visão Geral</button>
+          <button class="tab-btn px-3 py-2 rounded-xl text-sm bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition" data-tab="alunos">Alunos</button>
+          <button class="tab-btn px-3 py-2 rounded-xl text-sm bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition" data-tab="funcionarios">Funcionários</button>
+          <button class="tab-btn px-3 py-2 rounded-xl text-sm bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition" data-tab="prestadores">Prestadores</button>
+          <button class="tab-btn px-3 py-2 rounded-xl text-sm bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition" data-tab="planos">Planos</button>
+          <button class="tab-btn px-3 py-2 rounded-xl text-sm bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition" data-tab="lancamentos">Lançamentos</button>
+          <button class="tab-btn px-3 py-2 rounded-xl text-sm bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition" data-tab="retiradas">Retiradas</button>
+          <button class="tab-btn px-3 py-2 rounded-xl text-sm bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition" data-tab="relatorios">Relatórios</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 py-4">
+
+      <!-- OVERVIEW -->
+      <section id="tab-overview" class="tab-section hidden">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div>
+            <div class="text-xl font-bold">Visão Geral</div>
+            <div class="text-sm text-zinc-400">KPIs do mês + gráficos</div>
           </div>
 
+          <div class="flex gap-2 items-center">
+            <label class="text-sm text-zinc-300">Mês</label>
+            <input id="overviewMonth" type="month" class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" />
+          </div>
         </div>
 
-      </div>
+        <!-- KPI CARDS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+          <div class="card rounded-2xl p-4">
+            <div class="text-sm text-zinc-400">Receita (mês)</div>
+            <div id="kpiReceita" class="mono text-3xl font-bold text-green-400">R$ 0,00</div>
+          </div>
+          <div class="card rounded-2xl p-4">
+            <div class="text-sm text-zinc-400">Despesa (mês)</div>
+            <div id="kpiDespesa" class="mono text-3xl font-bold text-red-400">R$ 0,00</div>
+          </div>
+          <div class="card rounded-2xl p-4">
+            <div class="text-sm text-zinc-400">Saldo líquido</div>
+            <div id="kpiSaldo" class="mono text-3xl font-bold text-white">R$ 0,00</div>
+            <div id="kpiSaldoHint" class="text-xs text-zinc-500 mt-1 hidden">Negativo (−)</div>
+          </div>
+        </div>
 
-    </header>
-
-
-
-    <!-- CONTEÚDO -->
-
-    <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-
-      <div class="mb-6">
-
-        <h1 class="text-3xl sm:text-4xl font-extrabold text-white">SISTEMA DE GESTÃO BRABO v5.0</h1>
-
-        <p class="text-sm text-gray-400 mt-1">
-
-          Painel por unidade. Relatórios por período e base pronta para auditoria/IA.
-
-        </p>
-
-      </div>
-
-
-
-      <nav class="flex flex-wrap gap-2 mb-6 no-print">
-
-        <button data-tab="visaoGeral" class="tab-btn tab-active py-2 px-4 rounded-lg text-sm font-semibold">Visão Geral</button>
-
-        <button data-tab="alunos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Alunos</button>
-
-        <button data-tab="funcionarios" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Funcionários</button>
-
-
-
-        <!-- ✅ NOVO -->
-
-        <button data-tab="prestadores" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Prestadores</button>
-
-
-
-        <button data-tab="planos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Planos</button>
-
-        <button data-tab="lancamentos" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Lançamentos</button>
-
-
-
-        <!-- ✅ NOVO -->
-
-        <button data-tab="retiradas" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Retiradas</button>
-
-
-
-        <button data-tab="relatorios" class="tab-btn tab-inactive py-2 px-4 rounded-lg text-sm font-semibold">Relatórios</button>
-
-      </nav>
-
-
-
-      <main>
-
-
-
-        <!-- VISÃO GERAL -->
-
-        <section id="tab-visaoGeral" class="tab-content">
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-
-              <div class="text-sm text-gray-300 mb-1">Receita Bruta (mês)</div>
-
-              <div id="kpi-receita" class="text-3xl font-bold">R$ 0,00</div>
-
+        <!-- FLUXO FINANCEIRO -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-3 mt-4">
+          <div class="card rounded-2xl p-4">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <div class="font-semibold">Fluxo financeiro</div>
+                <div class="text-sm text-zinc-400">Receita vs Despesa por dia (no mês)</div>
+              </div>
             </div>
-
-            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-
-              <div class="text-sm text-gray-300 mb-1">Custo Total (mês)</div>
-
-              <div id="kpi-custo" class="text-3xl font-bold">R$ 0,00</div>
-
+            <div class="mt-3">
+              <canvas id="chartFluxo" height="140"></canvas>
             </div>
-
-            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-
-              <div class="text-sm text-gray-300 mb-1">Saldo (mês)</div>
-
-              <div id="kpi-saldo" class="text-3xl font-bold">R$ 0,00</div>
-
-            </div>
-
           </div>
 
-
-
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            <div class="bg-[#2d3748] p-4 rounded-xl shadow lg:col-span-2">
-
-              <h3 class="text-lg font-bold mb-3">Receita vs. Despesas (Mês Atual)</h3>
-
-              <canvas id="chart-receita-despesa"></canvas>
-
+          <!-- TOP 5 DESPESAS -->
+          <div class="card rounded-2xl p-4">
+            <div class="font-semibold">Top 5 Despesas (mês)</div>
+            <div class="text-sm text-zinc-400">Pizza + legenda lateral</div>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+              <div class="flex justify-center">
+                <canvas id="chartTopDespesas" width="260" height="260"></canvas>
+              </div>
+              <div id="legendTopDespesas" class="space-y-2"></div>
             </div>
-
-            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-
-              <h3 class="text-lg font-bold mb-3">Top 5 Despesas (Mês Atual)</h3>
-
-              <canvas id="chart-despesas-top"></canvas>
-
-            </div>
-
           </div>
+        </div>
 
-        </section>
+        <!-- TOP 5 RECEITAS -->
+        <div class="card rounded-2xl p-4 mt-3">
+          <div class="font-semibold">Top 5 Receitas (mês)</div>
+          <div class="text-sm text-zinc-400">Pizza + legenda lateral</div>
+          <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+            <div class="flex justify-center">
+              <canvas id="chartTopReceitas" width="260" height="260"></canvas>
+            </div>
+            <div id="legendTopReceitas" class="space-y-2"></div>
+          </div>
+        </div>
+      </section>
 
-
-
-        <!-- ALUNOS -->
-
-        <section id="tab-alunos" class="tab-content hidden">
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
-
-            <h3 class="text-lg font-bold">Alunos</h3>
-
-            <button id="btn-add-aluno" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
-
+      <!-- ALUNOS -->
+      <section id="tab-alunos" class="tab-section hidden">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div>
+            <div class="text-xl font-bold">Alunos</div>
+            <div class="text-sm text-zinc-400">Busca + paginação 50 por página</div>
+          </div>
+          <div class="flex gap-2 items-center">
+            <input id="alunosSearch" placeholder="Buscar por nome..." class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm w-64" />
+            <button id="btnNovoAluno" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
               Novo Aluno
-
             </button>
+          </div>
+        </div>
 
+        <div class="card rounded-2xl p-4 mt-4">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-zinc-400">Lista</div>
+            <div class="flex gap-2 items-center">
+              <button id="alunosPrev" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm">Voltar</button>
+              <div id="alunosPageInfo" class="text-sm text-zinc-300"></div>
+              <button id="alunosNext" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm">Avançar</button>
+            </div>
           </div>
 
-
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-
-            <table class="w-full text-left text-sm">
-
-              <thead>
-
-                <tr class="border-b border-gray-600">
-
-                  <th class="p-2">Nome</th>
-
-                  <th class="p-2">Email</th>
-
-                  <th class="p-2">Status</th>
-
-                  <th class="p-2">Desde</th>
-
-                  <th class="p-2">Criado por</th>
-
-                  <th class="p-2 text-right">Ações</th>
-
+          <div class="mt-3 overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="text-zinc-400">
+                <tr class="border-b border-zinc-800">
+                  <th class="text-left py-2 pr-2">Foto</th>
+                  <th class="text-left py-2 pr-2">Nome</th>
+                  <th class="text-left py-2 pr-2">Plano</th>
+                  <th class="text-left py-2 pr-2">Telefone</th>
+                  <th class="text-left py-2 pr-2">Ações</th>
                 </tr>
-
               </thead>
-
-              <tbody id="table-alunos"></tbody>
-
+              <tbody id="alunosTbody"></tbody>
             </table>
-
           </div>
+        </div>
+      </section>
 
-        </section>
-
-
-
-        <!-- FUNCIONÁRIOS -->
-
-        <section id="tab-funcionarios" class="tab-content hidden">
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
-
-            <h3 class="text-lg font-bold">Funcionários</h3>
-
-            <button id="btn-add-funcionario" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
-
+      <!-- FUNCIONÁRIOS -->
+      <section id="tab-funcionarios" class="tab-section hidden">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div>
+            <div class="text-xl font-bold">Funcionários</div>
+            <div class="text-sm text-zinc-400">Busca + paginação 50 por página</div>
+          </div>
+          <div class="flex gap-2 items-center">
+            <input id="funcSearch" placeholder="Buscar por nome..." class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm w-64" />
+            <button id="btnNovoFunc" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
               Novo Funcionário
-
             </button>
-
           </div>
+        </div>
 
-
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-
-            <table class="w-full text-left text-sm">
-
-              <thead>
-
-                <tr class="border-b border-gray-600">
-
-                  <th class="p-2">Nome</th>
-
-                  <th class="p-2">Cargo</th>
-
-                  <th class="p-2">Desde</th>
-
-                  <th class="p-2 text-right">Salário</th>
-
-                  <th class="p-2">Criado por</th>
-
-                  <th class="p-2 text-right">Ações</th>
-
-                </tr>
-
-              </thead>
-
-              <tbody id="table-funcionarios"></tbody>
-
-            </table>
-
-          </div>
-
-
-
-          <p class="text-xs text-gray-400 mt-3">
-
-            “Salário” aqui é por unidade selecionada (base + adicional desta unidade).
-
-          </p>
-
-        </section>
-
-
-
-        <!-- ✅ PRESTADORES -->
-
-        <section id="tab-prestadores" class="tab-content hidden">
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
-
-            <div>
-
-              <h3 class="text-lg font-bold">Prestadores de Serviço</h3>
-
-              <p class="text-xs text-gray-400">
-
-                Separe CLT (Funcionários) de Prestadores (Fixo/Temporário). Pode anexar foto/documentos para histórico.
-
-              </p>
-
+        <div class="card rounded-2xl p-4 mt-4">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-zinc-400">Lista</div>
+            <div class="flex gap-2 items-center">
+              <button id="funcPrev" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm">Voltar</button>
+              <div id="funcPageInfo" class="text-sm text-zinc-300"></div>
+              <button id="funcNext" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm">Avançar</button>
             </div>
+          </div>
 
-            <button id="btn-add-prestador" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
+          <div class="mt-3 overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="text-zinc-400">
+                <tr class="border-b border-zinc-800">
+                  <th class="text-left py-2 pr-2">Foto</th>
+                  <th class="text-left py-2 pr-2">Nome</th>
+                  <th class="text-left py-2 pr-2">Cargo</th>
+                  <th class="text-left py-2 pr-2">Salário</th>
+                  <th class="text-left py-2 pr-2">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="funcTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
+      <!-- PRESTADORES -->
+      <section id="tab-prestadores" class="tab-section hidden">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div>
+            <div class="text-xl font-bold">Prestadores</div>
+            <div class="text-sm text-zinc-400">Busca + paginação 50 por página</div>
+          </div>
+          <div class="flex gap-2 items-center">
+            <input id="prestSearch" placeholder="Buscar por nome..." class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm w-64" />
+            <button id="btnNovoPrest" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
               Novo Prestador
-
             </button>
+          </div>
+        </div>
 
+        <div class="card rounded-2xl p-4 mt-4">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-zinc-400">Lista</div>
+            <div class="flex gap-2 items-center">
+              <button id="prestPrev" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm">Voltar</button>
+              <div id="prestPageInfo" class="text-sm text-zinc-300"></div>
+              <button id="prestNext" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm">Avançar</button>
+            </div>
           </div>
 
-
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-
-            <table class="w-full text-left text-sm">
-
-              <thead>
-
-                <tr class="border-b border-gray-600">
-
-                  <th class="p-2">Nome</th>
-
-                  <th class="p-2">Tipo</th>
-
-                  <th class="p-2">Serviço</th>
-
-                  <th class="p-2">Período</th>
-
-                  <th class="p-2 text-right">Valor</th>
-
-                  <th class="p-2">Criado por</th>
-
-                  <th class="p-2 text-right">Ações</th>
-
+          <div class="mt-3 overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="text-zinc-400">
+                <tr class="border-b border-zinc-800">
+                  <th class="text-left py-2 pr-2">Foto</th>
+                  <th class="text-left py-2 pr-2">Nome</th>
+                  <th class="text-left py-2 pr-2">Tipo</th>
+                  <th class="text-left py-2 pr-2">Contato</th>
+                  <th class="text-left py-2 pr-2">Ações</th>
                 </tr>
-
               </thead>
-
-              <tbody id="table-prestadores"></tbody>
-
+              <tbody id="prestTbody"></tbody>
             </table>
-
           </div>
+        </div>
+      </section>
 
-        </section>
-
-
-
-        <!-- PLANOS -->
-
-        <section id="tab-planos" class="tab-content hidden">
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
-
-            <h3 class="text-lg font-bold">Planos</h3>
-
-            <button id="btn-add-plano" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
-
+      <!-- PLANOS -->
+      <section id="tab-planos" class="tab-section hidden">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div>
+            <div class="text-xl font-bold">Planos</div>
+            <div class="text-sm text-zinc-400">Cadastro básico</div>
+          </div>
+          <div class="flex gap-2 items-center">
+            <button id="btnNovoPlano" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
               Novo Plano
-
             </button>
-
           </div>
+        </div>
 
-
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-
-            <table class="w-full text-left text-sm">
-
-              <thead>
-
-                <tr class="border-b border-gray-600">
-
-                  <th class="p-2">Nome</th>
-
-                  <th class="p-2">Tipo</th>
-
-                  <th class="p-2 text-right">Valor</th>
-
-                  <th class="p-2">Status</th>
-
-                  <th class="p-2">Criado por</th>
-
-                  <th class="p-2 text-right">Ações</th>
-
+        <div class="card rounded-2xl p-4 mt-4">
+          <div class="text-sm text-zinc-400">Lista</div>
+          <div class="mt-3 overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="text-zinc-400">
+                <tr class="border-b border-zinc-800">
+                  <th class="text-left py-2 pr-2">Nome</th>
+                  <th class="text-left py-2 pr-2">Valor</th>
+                  <th class="text-left py-2 pr-2">Ativo</th>
+                  <th class="text-left py-2 pr-2">Ações</th>
                 </tr>
-
               </thead>
-
-              <tbody id="table-planos"></tbody>
-
+              <tbody id="planosTbody"></tbody>
             </table>
+          </div>
+        </div>
+      </section>
 
+      <!-- LANÇAMENTOS -->
+      <section id="tab-lancamentos" class="tab-section hidden">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+          <div>
+            <div class="text-xl font-bold">Lançamentos</div>
+            <div class="text-sm text-zinc-400">Receitas / Despesas + Documento (3x4)</div>
           </div>
 
-
-
-          <p class="text-xs text-gray-400 mt-3">
-
-            Inclui Mensal/Trimestral/Anual e “Zanco Total”. Se quiser “Natação” e “Lutas”, crie planos específicos (ex.: “Mensal Natação”, “Mensal Lutas”).
-
-          </p>
-
-        </section>
-
-
-
-        <!-- LANÇAMENTOS -->
-
-        <section id="tab-lancamentos" class="tab-content hidden">
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
-
-            <div>
-
-              <h3 class="text-lg font-bold">Lançamentos</h3>
-
-              <p class="text-xs text-gray-400">
-
-                Receitas/Despesas da unidade. Despesas podem ser CLT (Folha) ou Prestadores (Serviços).
-
-              </p>
-
-            </div>
-
-            <button id="btn-add-lancamento" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
-
+          <div class="flex flex-wrap gap-2 items-center">
+            <label class="text-sm text-zinc-300">Mês</label>
+            <input id="lancMonth" type="month" class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" />
+            <button id="btnNovoLanc" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
               Novo Lançamento
-
             </button>
-
           </div>
+        </div>
 
-
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-
-            <table class="w-full text-left text-sm">
-
-              <thead>
-
-                <tr class="border-b border-gray-600">
-
-                  <th class="p-2">Descrição</th>
-
-                  <th class="p-2">Categoria</th>
-
-                  <th class="p-2">Tipo</th>
-
-                  <th class="p-2 text-right">Valor</th>
-
-                  <th class="p-2">Vencimento</th>
-
-                  <th class="p-2">Criado por</th>
-
-                  <th class="p-2 text-right">Ações</th>
-
+        <div class="card rounded-2xl p-4 mt-4">
+          <div class="text-sm text-zinc-400">Lista do mês</div>
+          <div class="mt-3 overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="text-zinc-400">
+                <tr class="border-b border-zinc-800">
+                  <th class="text-left py-2 pr-2">Data</th>
+                  <th class="text-left py-2 pr-2">Tipo</th>
+                  <th class="text-left py-2 pr-2">Categoria</th>
+                  <th class="text-left py-2 pr-2">Descrição</th>
+                  <th class="text-left py-2 pr-2">Valor</th>
+                  <th class="text-left py-2 pr-2">Documento</th>
+                  <th class="text-left py-2 pr-2">Ações</th>
                 </tr>
-
               </thead>
-
-              <tbody id="table-lancamentos"></tbody>
-
+              <tbody id="lancTbody"></tbody>
             </table>
-
           </div>
+        </div>
+      </section>
 
+      <!-- RETIRADAS -->
+      <section id="tab-retiradas" class="tab-section hidden">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div>
+            <div class="text-xl font-bold">Retiradas</div>
+            <div class="text-sm text-zinc-400">Reduz saldo/caixa (sem virar despesa operacional)</div>
+          </div>
+          <div class="flex gap-2 items-center">
+            <button id="btnNovaRetirada" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
+              Nova Retirada
+            </button>
+          </div>
+        </div>
 
+        <div class="card rounded-2xl p-4 mt-4">
+          <div class="text-sm text-zinc-400">Lista</div>
+          <div class="mt-3 overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="text-zinc-400">
+                <tr class="border-b border-zinc-800">
+                  <th class="text-left py-2 pr-2">Data</th>
+                  <th class="text-left py-2 pr-2">Nome</th>
+                  <th class="text-left py-2 pr-2">Valor</th>
+                  <th class="text-left py-2 pr-2">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="retTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-          <p class="text-xs text-gray-400 mt-3">
+      <!-- RELATÓRIOS -->
+      <section id="tab-relatorios" class="tab-section hidden">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div>
+            <div class="text-xl font-bold">Relatórios</div>
+            <div class="text-sm text-zinc-400">Por período / unidade (Financeiro, Alunos, Completo)</div>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <input id="repStart" type="date" class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" />
+            <input id="repEnd" type="date" class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" />
 
-            Sugestões: Luz, Água, Internet, Impostos, Folha, Aluguel, Marketing, Manutenção, <b>Prestadores de Serviço</b>, Parceiros (TotalPass/Gympass), Produtos/Loja…
+            <select id="repTipo" class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm">
+              <option value="financeiro">Financeiro</option>
+              <option value="alunos">Alunos</option>
+              <option value="completo">Completo</option>
+            </select>
 
-          </p>
+            <button id="btnGerarRelatorio" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
+              Gerar / Imprimir
+            </button>
+          </div>
+        </div>
 
-        </section>
+        <div class="card rounded-2xl p-4 mt-4">
+          <div class="text-sm text-zinc-400">Prévia</div>
+          <div id="repPreview" class="mt-3 text-sm text-zinc-200 whitespace-pre-wrap"></div>
+        </div>
+      </section>
 
+    </div>
+  </div>
 
+  <!-- MODAL BASE -->
+  <div id="modalBackdrop" class="hidden fixed inset-0 z-50 bg-black/70 p-3 overflow-y-auto">
+    <div class="max-w-3xl mx-auto mt-10 card rounded-2xl p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div id="modalTitle" class="text-lg font-bold"></div>
+          <div id="modalSubtitle" class="text-sm text-zinc-400"></div>
+        </div>
+        <button id="modalClose" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm">Fechar</button>
+      </div>
+      <div id="modalBody" class="mt-4"></div>
+    </div>
+  </div>
 
-        <!-- ✅ RETIRADAS -->
+  <script>
+    /****************************************************************
+     * CONFIG (PREENCHA)
+     ****************************************************************/
+    const firebaseConfig = {
+      // >>> PREENCHA COM SEUS DADOS DO FIREBASE (Project settings -> Web app)
+      apiKey: "SUA_API_KEY",
+      authDomain: "SEU_AUTH_DOMAIN",
+      projectId: "SEU_PROJECT_ID",
+      storageBucket: "SEU_STORAGE_BUCKET",
+      messagingSenderId: "SEU_SENDER_ID",
+      appId: "SEU_APP_ID"
+    };
 
-        <section id="tab-retiradas" class="tab-content hidden">
+    // E-mails permitidos (bater com as Rules)
+    const allowedEmails = [
+      "thiagobrabobm@gmail.com",
+      "marlucezanco02@gmail.com"
+    ].map(e => e.toLowerCase());
 
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4 flex justify-between items-center">
+    // Unidades (simples e editável)
+    const DEFAULT_UNIDADES = ["Matriz"];
+
+    /****************************************************************
+     * ESTADO
+     ****************************************************************/
+    let auth, db;
+    let currentUser = null;
+    let currentUnit = null;
+    let started = false;
+
+    let unsubscribers = [];
+    const state = {
+      planos: [],
+      alunos: [],
+      funcionarios: [],
+      prestadores: [],
+      lancamentos: [],
+      retiradas: []
+    };
+
+    // paginações
+    const pag = {
+      alunos: { page: 1, perPage: 50 },
+      func: { page: 1, perPage: 50 },
+      prest: { page: 1, perPage: 50 }
+    };
+
+    // charts
+    let chartFluxo = null;
+    let chartTopDespesas = null;
+    let chartTopReceitas = null;
+
+    /****************************************************************
+     * HELPERS UI
+     ****************************************************************/
+    const $ = (id) => document.getElementById(id);
+
+    function money(n) {
+      const v = Number(n || 0);
+      return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function safeStr(s) {
+      return (s ?? "").toString();
+    }
+
+    function ymFromDateInput(value) {
+      // "YYYY-MM" -> { y, m }
+      if (!value || !/^\d{4}-\d{2}$/.test(value)) return null;
+      const [y, m] = value.split("-").map(Number);
+      return { y, m };
+    }
+
+    function toISODate(d) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const dd = String(d.getDate()).padStart(2,"0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function firstDayOfMonth(y, m) { return new Date(y, m-1, 1, 0,0,0,0); }
+    function lastDayOfMonth(y, m)  { return new Date(y, m, 0, 23,59,59,999); }
+    function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); }
+
+    function btnClass(kind="dark") {
+      // Mantém layout “padrão” em tudo (mesma altura, radius, borda)
+      if (kind === "primary") return "px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition";
+      if (kind === "danger")  return "px-3 py-2 rounded-xl bg-red-950/40 border border-red-900/50 text-red-200 hover:bg-red-950/60 transition text-sm";
+      return "px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm";
+    }
+
+    function showLoginError(msg) {
+      const el = $("loginError");
+      if (!msg) { el.classList.add("hidden"); el.textContent = ""; return; }
+      el.textContent = msg;
+      el.classList.remove("hidden");
+    }
+
+    function showLogin() {
+      $("loginView").classList.remove("hidden");
+      $("appView").classList.add("hidden");
+    }
+
+    function showApp() {
+      $("loginView").classList.add("hidden");
+      $("appView").classList.remove("hidden");
+    }
+
+    function setActiveTab(tabKey) {
+      document.querySelectorAll(".tab-section").forEach(s => s.classList.add("hidden"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+
+      const section = $("tab-" + tabKey);
+      if (section) section.classList.remove("hidden");
+
+      const btn = document.querySelector(`.tab-btn[data-tab="${tabKey}"]`);
+      if (btn) btn.classList.add("active");
+
+      localStorage.setItem("sgb_tab", tabKey);
+
+      // atualizações específicas por tela
+      if (tabKey === "overview") renderOverview();
+      if (tabKey === "alunos") renderAlunos();
+      if (tabKey === "funcionarios") renderFuncionarios();
+      if (tabKey === "prestadores") renderPrestadores();
+      if (tabKey === "planos") renderPlanos();
+      if (tabKey === "lancamentos") renderLancamentos();
+      if (tabKey === "retiradas") renderRetiradas();
+      if (tabKey === "relatorios") renderRelatoriosPreview();
+    }
+
+    function openModal({ title, subtitle="", bodyHtml="" }) {
+      $("modalTitle").textContent = title;
+      $("modalSubtitle").textContent = subtitle;
+      $("modalBody").innerHTML = bodyHtml;
+      $("modalBackdrop").classList.remove("hidden");
+    }
+
+    function closeModal() {
+      $("modalBackdrop").classList.add("hidden");
+      $("modalBody").innerHTML = "";
+    }
+
+    $("modalClose").addEventListener("click", closeModal);
+    $("modalBackdrop").addEventListener("click", (e) => {
+      if (e.target === $("modalBackdrop")) closeModal();
+    });
+
+    /****************************************************************
+     * IMAGENS (3x4)
+     ****************************************************************/
+    async function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    }
+
+    async function loadImage(dataUrl) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+    }
+
+    async function cropResizeTo3x4(file, outW=300, outH=400, quality=0.85) {
+      // Center-crop para razão 3:4 e reduz tamanho (JPEG)
+      const dataUrl = await fileToDataUrl(file);
+      const img = await loadImage(dataUrl);
+
+      const targetRatio = outW / outH; // 0.75
+      const srcRatio = img.width / img.height;
+
+      let sx=0, sy=0, sw=img.width, sh=img.height;
+
+      if (srcRatio > targetRatio) {
+        // imagem mais “larga” -> corta laterais
+        sh = img.height;
+        sw = sh * targetRatio;
+        sx = (img.width - sw) / 2;
+      } else {
+        // imagem mais “alta” -> corta topo/baixo
+        sw = img.width;
+        sh = sw / targetRatio;
+        sy = (img.height - sh) / 2;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = outW;
+      canvas.height = outH;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0,0,outW,outH);
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+
+      return canvas.toDataURL("image/jpeg", quality);
+    }
+
+    /****************************************************************
+     * FIREBASE
+     ****************************************************************/
+    function initFirebase() {
+      try {
+        if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+        db.settings({ ignoreUndefinedProperties: true });
+
+        auth.onAuthStateChanged(async (user) => {
+          if (!user) {
+            currentUser = null;
+            started = false;
+            showLogin();
+            return;
+          }
+
+          const email = (user.email || "").toLowerCase();
+
+          if (!email || !allowedEmails.includes(email)) {
+            await auth.signOut();
+            currentUser = null;
+            started = false;
+            showLogin();
+            showLoginError("Acesso negado: e-mail não autorizado.");
+            return;
+          }
+
+          currentUser = email;
+          $("userEmail").textContent = currentUser;
+
+          showApp();
+          startAfterLogin();
+        });
+
+      } catch (e) {
+        console.error("[SGB] Firebase init error:", e);
+        showLogin();
+        showLoginError("Erro ao inicializar Firebase. Verifique o console.");
+      }
+    }
+
+    async function loginWithGoogle() {
+      try {
+        showLoginError("");
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        await auth.signInWithPopup(provider);
+      } catch (e) {
+        console.error("[SGB] login error:", e);
+
+        if (e.code === "auth/unauthorized-domain") {
+          showLoginError("Domínio não autorizado. Adicione seu domínio do Vercel em Authorized domains no Firebase Auth.");
+          return;
+        }
+
+        if (e.code === "auth/popup-blocked" || e.code === "auth/cancelled-popup-request") {
+          // fallback redirect
+          try {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            await auth.signInWithRedirect(provider);
+            return;
+          } catch (err) {
+            console.error("[SGB] redirect login error:", err);
+          }
+        }
+
+        showLoginError("Falha no login. Veja o console para detalhes.");
+      }
+    }
+
+    function logout() {
+      unsubscribers.forEach(u => { try { u && u(); } catch {} });
+      unsubscribers = [];
+
+      state.planos = [];
+      state.alunos = [];
+      state.funcionarios = [];
+      state.prestadores = [];
+      state.lancamentos = [];
+      state.retiradas = [];
+
+      started = false;
+      currentUser = null;
+
+      try { auth?.signOut?.(); } catch {}
+      showLogin();
+    }
+
+    /****************************************************************
+     * START + UNIDADE + LISTENERS
+     ****************************************************************/
+    function loadUnits() {
+      const saved = JSON.parse(localStorage.getItem("sgb_units") || "null");
+      let units = Array.isArray(saved) && saved.length ? saved : DEFAULT_UNIDADES;
+      units = units.map(u => safeStr(u).trim()).filter(Boolean);
+
+      $("unitSelect").innerHTML = units.map(u => `<option value="${u}">${u}</option>`).join("");
+
+      const stored = localStorage.getItem("sgb_unit");
+      const pick = stored && units.includes(stored) ? stored : units[0];
+      $("unitSelect").value = pick;
+      currentUnit = pick;
+    }
+
+    function setUnit(u) {
+      currentUnit = u;
+      localStorage.setItem("sgb_unit", currentUnit);
+
+      // reseta listeners
+      unsubscribers.forEach(u => { try { u && u(); } catch {} });
+      unsubscribers = [];
+
+      // listeners por unidade
+      const base = db.collection("unidades").doc(currentUnit);
+
+      unsubscribers.push(
+        base.collection("planos").orderBy("nome").onSnapshot(snap => {
+          state.planos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderPlanos();
+          refreshSelectsPlanos();
+          renderAlunos();
+        })
+      );
+
+      unsubscribers.push(
+        base.collection("alunos").orderBy("nome").onSnapshot(snap => {
+          state.alunos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderAlunos();
+          refreshSelectsAlunos();
+          renderLancamentos();
+          renderRelatoriosPreview();
+        })
+      );
+
+      unsubscribers.push(
+        base.collection("funcionarios").orderBy("nome").onSnapshot(snap => {
+          state.funcionarios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderFuncionarios();
+          refreshSelectsFuncionarios();
+          renderLancamentos();
+          renderRelatoriosPreview();
+        })
+      );
+
+      unsubscribers.push(
+        base.collection("prestadores").orderBy("nome").onSnapshot(snap => {
+          state.prestadores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderPrestadores();
+          refreshSelectsPrestadores();
+          renderLancamentos();
+          renderRelatoriosPreview();
+        })
+      );
+
+      unsubscribers.push(
+        base.collection("lancamentos").orderBy("data", "desc").onSnapshot(snap => {
+          state.lancamentos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderLancamentos();
+          renderOverview();
+          renderRelatoriosPreview();
+        })
+      );
+
+      unsubscribers.push(
+        base.collection("retiradas").orderBy("data", "desc").onSnapshot(snap => {
+          state.retiradas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderRetiradas();
+          renderRelatoriosPreview();
+        })
+      );
+
+      // atualiza telas
+      renderOverview();
+    }
+
+    function startAfterLogin() {
+      if (started) return;
+      started = true;
+
+      loadUnits();
+      setUnit(currentUnit);
+
+      // Tab inicial
+      const tab = localStorage.getItem("sgb_tab") || "overview";
+      setActiveTab(tab);
+
+      // Datas padrão
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+      $("overviewMonth").value = month;
+      $("lancMonth").value = month;
+
+      $("repEnd").value = toISODate(now);
+      const start = new Date(now);
+      start.setDate(1);
+      $("repStart").value = toISODate(start);
+    }
+
+    /****************************************************************
+     * EVENTS GERAIS
+     ****************************************************************/
+    $("btnLoginGoogle").addEventListener("click", loginWithGoogle);
+    $("btnLogout").addEventListener("click", logout);
+
+    $("unitSelect").addEventListener("change", (e) => {
+      setUnit(e.target.value);
+    });
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
+    });
+
+    $("overviewMonth").addEventListener("change", renderOverview);
+    $("lancMonth").addEventListener("change", renderLancamentos);
+
+    /****************************************************************
+     * OVERVIEW (KPIs + CHARTS)
+     ****************************************************************/
+    function getLancamentosDoMes(ym) {
+      if (!ym) return [];
+      const { y, m } = ym;
+      const ini = firstDayOfMonth(y, m).getTime();
+      const fim = lastDayOfMonth(y, m).getTime();
+
+      return state.lancamentos.filter(l => {
+        const t = new Date(l.data || l.createdAt || l.created_at || l.dt || l.date || 0).getTime();
+        // Preferir campo data ISO (YYYY-MM-DD)
+        if (l.data && /^\d{4}-\d{2}-\d{2}$/.test(l.data)) {
+          const tt = new Date(l.data + "T00:00:00").getTime();
+          return tt >= ini && tt <= fim;
+        }
+        return t >= ini && t <= fim;
+      });
+    }
+
+    function sumByTipo(lancs, tipo) {
+      return lancs
+        .filter(l => (l.tipo || "").toUpperCase() === tipo)
+        .reduce((acc, l) => acc + Number(l.valor || 0), 0);
+    }
+
+    function groupTop5ByCategoria(lancs, tipo) {
+      const map = new Map();
+      lancs.forEach(l => {
+        if ((l.tipo || "").toUpperCase() !== tipo) return;
+        const cat = safeStr(l.categoria || "Sem categoria").trim() || "Sem categoria";
+        const val = Number(l.valor || 0);
+        map.set(cat, (map.get(cat) || 0) + val);
+      });
+      const arr = [...map.entries()].map(([k,v]) => ({ label: k, value: v }));
+      arr.sort((a,b) => b.value - a.value);
+      return arr.slice(0, 5);
+    }
+
+    function renderLegend(containerId, items, colors) {
+      const el = $(containerId);
+      el.innerHTML = "";
+      if (!items.length) {
+        el.innerHTML = `<div class="text-sm text-zinc-400">Sem dados no período.</div>`;
+        return;
+      }
+
+      items.forEach((it, idx) => {
+        const c = colors[idx % colors.length];
+        const row = document.createElement("div");
+        row.className = "flex items-center justify-between gap-2 bg-zinc-900/40 border border-zinc-800 rounded-xl px-3 py-2";
+        row.innerHTML = `
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded" style="background:${c}"></div>
+            <div class="text-sm text-zinc-200">${safeStr(it.label)}</div>
+          </div>
+          <div class="text-sm mono text-zinc-100">${money(it.value)}</div>
+        `;
+        el.appendChild(row);
+      });
+    }
+
+    function renderOverview() {
+      const ym = ymFromDateInput($("overviewMonth").value);
+      const lancs = getLancamentosDoMes(ym);
+
+      const receita = sumByTipo(lancs, "RECEITA");
+      const despesa = sumByTipo(lancs, "DESPESA");
+      const saldo = receita - despesa;
+
+      $("kpiReceita").textContent = money(receita);
+      $("kpiDespesa").textContent = money(despesa);
+
+      if (saldo < 0) {
+        $("kpiSaldo").textContent = "− " + money(Math.abs(saldo));
+        $("kpiSaldoHint").classList.remove("hidden");
+      } else {
+        $("kpiSaldo").textContent = money(saldo);
+        $("kpiSaldoHint").classList.add("hidden");
+      }
+
+      // Fluxo (por dia)
+      if (!ym) return;
+      const { y, m } = ym;
+      const dcount = daysInMonth(y,m);
+      const labels = Array.from({length:dcount}, (_,i) => String(i+1));
+      const receitaDia = new Array(dcount).fill(0);
+      const despesaDia = new Array(dcount).fill(0);
+
+      lancs.forEach(l => {
+        let day = 0;
+        if (l.data && /^\d{4}-\d{2}-\d{2}$/.test(l.data)) {
+          day = Number(l.data.split("-")[2]);
+        } else {
+          const dt = new Date(l.data || l.createdAt || l.dt || 0);
+          day = dt.getDate();
+        }
+        if (!day || day < 1 || day > dcount) return;
+        const idx = day-1;
+        const tipo = (l.tipo||"").toUpperCase();
+        const val = Number(l.valor||0);
+        if (tipo === "RECEITA") receitaDia[idx] += val;
+        if (tipo === "DESPESA") despesaDia[idx] += val;
+      });
+
+      // chart fluxo
+      const ctx = $("chartFluxo").getContext("2d");
+      if (chartFluxo) chartFluxo.destroy();
+      chartFluxo = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Receita",
+              data: receitaDia,
+              backgroundColor: "rgba(34,197,94,0.45)",
+              borderColor: "rgba(34,197,94,1)",
+              borderWidth: 1
+            },
+            {
+              label: "Despesa",
+              data: despesaDia,
+              backgroundColor: "rgba(239,68,68,0.45)",
+              borderColor: "rgba(239,68,68,1)",
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: "#e4e4e7" } }
+          },
+          scales: {
+            x: { ticks: { color: "#a1a1aa" }, grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { ticks: { color: "#a1a1aa" }, grid: { color: "rgba(255,255,255,0.06)" } }
+          }
+        }
+      });
+
+      // Top 5 Despesas (pizza)
+      const topD = groupTop5ByCategoria(lancs, "DESPESA");
+      const topR = groupTop5ByCategoria(lancs, "RECEITA");
+      const pieColors = ["#60a5fa", "#a78bfa", "#f472b6", "#fbbf24", "#34d399"]; // 5 cores
+
+      // despesas pie
+      const ctxD = $("chartTopDespesas").getContext("2d");
+      if (chartTopDespesas) chartTopDespesas.destroy();
+      chartTopDespesas = new Chart(ctxD, {
+        type: "pie",
+        data: {
+          labels: topD.map(x => x.label),
+          datasets: [{
+            data: topD.map(x => x.value),
+            backgroundColor: topD.map((_,i)=> pieColors[i%pieColors.length]),
+            borderColor: "rgba(0,0,0,0.25)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+      renderLegend("legendTopDespesas", topD, pieColors);
+
+      // receitas pie
+      const ctxR = $("chartTopReceitas").getContext("2d");
+      if (chartTopReceitas) chartTopReceitas.destroy();
+      chartTopReceitas = new Chart(ctxR, {
+        type: "pie",
+        data: {
+          labels: topR.map(x => x.label),
+          datasets: [{
+            data: topR.map(x => x.value),
+            backgroundColor: topR.map((_,i)=> pieColors[i%pieColors.length]),
+            borderColor: "rgba(0,0,0,0.25)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+      renderLegend("legendTopReceitas", topR, pieColors);
+    }
+
+    /****************************************************************
+     * LISTAS COM BUSCA + PAGINAÇÃO (50)
+     ****************************************************************/
+    function filterByName(arr, q) {
+      const s = safeStr(q).trim().toLowerCase();
+      if (!s) return arr;
+      return arr.filter(x => safeStr(x.nome).toLowerCase().includes(s));
+    }
+
+    function paginate(arr, page, perPage) {
+      const total = arr.length;
+      const pages = Math.max(1, Math.ceil(total / perPage));
+      const p = Math.min(Math.max(1, page), pages);
+      const start = (p - 1) * perPage;
+      return { items: arr.slice(start, start + perPage), page: p, pages, total };
+    }
+
+    function tinyPhotoCell(dataUrl) {
+      const src = dataUrl || "";
+      if (!src) {
+        return `<div class="w-[42px] h-[56px] rounded-lg bg-zinc-900 border border-zinc-800"></div>`;
+      }
+      return `<img src="${src}" class="w-[42px] h-[56px] object-cover rounded-lg border border-zinc-800" />`;
+    }
+
+    /****************************************************************
+     * ALUNOS
+     ****************************************************************/
+    $("alunosSearch").addEventListener("input", () => { pag.alunos.page = 1; renderAlunos(); });
+    $("alunosPrev").addEventListener("click", () => { pag.alunos.page--; renderAlunos(); });
+    $("alunosNext").addEventListener("click", () => { pag.alunos.page++; renderAlunos(); });
+    $("btnNovoAluno").addEventListener("click", () => openAlunoModal(null));
+
+    function renderAlunos() {
+      const q = $("alunosSearch").value;
+      const filtered = filterByName(state.alunos, q);
+      const { items, page, pages, total } = paginate(filtered, pag.alunos.page, pag.alunos.perPage);
+      pag.alunos.page = page;
+
+      $("alunosPageInfo").textContent = `Página ${page} / ${pages} (${total})`;
+
+      const tbody = $("alunosTbody");
+      tbody.innerHTML = "";
+
+      items.forEach(a => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-zinc-900";
+        tr.innerHTML = `
+          <td class="py-2 pr-2">${tinyPhotoCell(a.fotoDataUrl)}</td>
+          <td class="py-2 pr-2 font-semibold">${safeStr(a.nome)}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(a.planoNome || "")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(a.telefone || "")}</td>
+          <td class="py-2 pr-2">
+            <div class="flex gap-2">
+              <button class="${btnClass("dark")}" data-act="edit">Editar</button>
+              <button class="${btnClass("danger")}" data-act="del">Remover</button>
+            </div>
+          </td>
+        `;
+        tr.querySelector('[data-act="edit"]').addEventListener("click", () => openAlunoModal(a));
+        tr.querySelector('[data-act="del"]').addEventListener("click", () => deleteAluno(a));
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deleteAluno(a) {
+      if (!confirm(`Remover aluno "${a.nome}"?`)) return;
+      const ref = db.collection("unidades").doc(currentUnit).collection("alunos").doc(a.id);
+      await ref.delete();
+    }
+
+    function refreshSelectsPlanos() {
+      // usado em modal aluno
+    }
+
+    function refreshSelectsAlunos() {
+      // usado em modal lançamento
+    }
+
+    function openAlunoModal(aluno) {
+      const isEdit = !!aluno;
+      const planoOptions = state.planos.map(p => `<option value="${p.id}">${safeStr(p.nome)}</option>`).join("");
+      const foto = aluno?.fotoDataUrl || "";
+
+      const body = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm text-zinc-300">Nome</label>
+              <input id="mAlunoNome" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(aluno?.nome || "")}" />
+            </div>
 
             <div>
-
-              <h3 class="text-lg font-bold">Retirada de Sócios</h3>
-
-              <p class="text-xs text-gray-400">
-
-                Sai do saldo/caixa, mas <b>não</b> entra como despesa operacional. Registre nome/data/valor e (opcional) comprovante.
-
-              </p>
-
+              <label class="text-sm text-zinc-300">Telefone</label>
+              <input id="mAlunoTel" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(aluno?.telefone || "")}" />
             </div>
 
-            <button id="btn-add-retirada" class="bg-[#4299e1] hover:bg-[#3182ce] text-white font-semibold py-2 px-4 rounded-lg text-sm">
-
-              Nova Retirada
-
-            </button>
-
+            <div>
+              <label class="text-sm text-zinc-300">Plano</label>
+              <select id="mAlunoPlano" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm">
+                <option value="">(Sem plano)</option>
+                ${planoOptions}
+              </select>
+              <div class="text-xs text-zinc-500 mt-1">Se escolher plano, você pode gerar mensalidade automática no futuro.</div>
+            </div>
           </div>
 
+          <div class="space-y-3">
+            <div class="text-sm text-zinc-300">Foto 3x4 (menor)</div>
 
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-
-            <table class="w-full text-left text-sm">
-
-              <thead>
-
-                <tr class="border-b border-gray-600">
-
-                  <th class="p-2">Sócio</th>
-
-                  <th class="p-2">Data</th>
-
-                  <th class="p-2">Descrição</th>
-
-                  <th class="p-2 text-right">Valor</th>
-
-                  <th class="p-2">Criado por</th>
-
-                  <th class="p-2 text-right">Ações</th>
-
-                </tr>
-
-              </thead>
-
-              <tbody id="table-retiradas"></tbody>
-
-            </table>
-
-          </div>
-
-        </section>
-
-
-
-        <!-- RELATÓRIOS -->
-
-        <section id="tab-relatorios" class="tab-content hidden">
-
-          <div class="bg-[#2d3748] p-4 rounded-xl shadow mb-4">
-
-            <div class="flex flex-wrap items-end justify-between gap-3">
-
-              <div>
-
-                <h3 class="text-lg font-bold">Relatórios por período</h3>
-
-                <p class="text-xs text-gray-400">
-
-                  Tudo já é filtrado pela unidade selecionada. Escolha o tipo: Financeiro / Alunos / Completo.
-
-                </p>
-
+            <div class="flex gap-3 items-start">
+              <div class="w-[84px] h-[112px] rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center">
+                ${foto ? `<img id="mAlunoFotoPreview" src="${foto}" class="w-full h-full object-cover" />` : `<div id="mAlunoFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`}
               </div>
 
-
-
-              <div class="flex flex-wrap items-end gap-3 no-print">
-
-                <div>
-
-                  <label class="text-xs text-gray-300">Tipo</label>
-
-                  <select id="rel-tipo" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white text-sm">
-
-                    <option value="COMPLETO">Completo (Financeiro + Alunos)</option>
-
-                    <option value="FINANCEIRO">Somente Financeiro</option>
-
-                    <option value="ALUNOS">Somente Alunos</option>
-
-                  </select>
-
-                </div>
-
-
-
-                <div>
-
-                  <label class="text-xs text-gray-300">De</label>
-
-                  <input id="rel-from" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white text-sm" />
-
-                </div>
-
-
-
-                <div>
-
-                  <label class="text-xs text-gray-300">Até</label>
-
-                  <input id="rel-to" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white text-sm" />
-
-                </div>
-
-
-
-                <div class="flex items-center gap-2">
-
-                  <input id="rel-incluir-retiradas" type="checkbox" class="w-4 h-4" checked />
-
-                  <label for="rel-incluir-retiradas" class="text-xs text-gray-300">Incluir retiradas</label>
-
-                </div>
-
-
-
-                <button id="btn-rel-gerar" class="px-4 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">
-
-                  Gerar
-
-                </button>
-
-                <button id="btn-rel-imprimir" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">
-
-                  Imprimir
-
-                </button>
-
+              <div class="flex flex-col gap-2">
+                <button id="mAlunoFotoTirar" class="${btnClass("dark")}">Tirar</button>
+                <button id="mAlunoFotoAnexar" class="${btnClass("dark")}">Anexar</button>
+                <button id="mAlunoFotoRemover" class="${btnClass("danger")}">Remover</button>
+                <input id="mAlunoFotoInputCam" type="file" accept="image/*" capture="user" class="hidden" />
+                <input id="mAlunoFotoInputFile" type="file" accept="image/*" class="hidden" />
               </div>
-
             </div>
 
+            <div class="pt-2">
+              <button id="mAlunoSalvar" class="${btnClass("primary")} w-full">${isEdit ? "Salvar alterações" : "Criar aluno"}</button>
+            </div>
           </div>
-
-
-
-          <!-- KPIs do período (financeiro) -->
-
-          <div id="rel-box-kpis" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-
-              <div class="text-sm text-gray-300 mb-1">Receita (período)</div>
-
-              <div id="rel-receita" class="text-2xl font-bold">R$ 0,00</div>
-
-            </div>
-
-            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-
-              <div class="text-sm text-gray-300 mb-1">Despesas (período)</div>
-
-              <div id="rel-custo" class="text-2xl font-bold">R$ 0,00</div>
-
-            </div>
-
-            <div class="bg-[#2d3748] p-4 rounded-xl shadow">
-
-              <div class="text-sm text-gray-300 mb-1">Saldo (período)</div>
-
-              <div id="rel-saldo" class="text-2xl font-bold">R$ 0,00</div>
-
-            </div>
-
-          </div>
-
-
-
-          <!-- Financeiro -->
-
-          <div id="rel-box-fin" class="mt-6 bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-
-            <div class="flex items-center justify-between gap-3 mb-3">
-
-              <h4 class="font-bold">Financeiro no período</h4>
-
-              <div class="text-xs text-gray-400" id="rel-info"></div>
-
-            </div>
-
-            <table class="w-full text-left text-sm">
-
-              <thead>
-
-                <tr class="border-b border-gray-600">
-
-                  <th class="p-2">Data</th>
-
-                  <th class="p-2">Tipo</th>
-
-                  <th class="p-2">Categoria</th>
-
-                  <th class="p-2">Descrição</th>
-
-                  <th class="p-2 text-right">Valor</th>
-
-                </tr>
-
-              </thead>
-
-              <tbody id="rel-table-fin"></tbody>
-
-            </table>
-
-          </div>
-
-
-
-          <!-- Alunos -->
-
-          <div id="rel-box-alunos" class="mt-6 bg-[#2d3748] p-4 rounded-xl shadow overflow-x-auto">
-
-            <div class="flex items-center justify-between gap-3 mb-3">
-
-              <h4 class="font-bold">Alunos no período</h4>
-
-              <div class="text-xs text-gray-400" id="rel-alunos-info"></div>
-
-            </div>
-
-            <table class="w-full text-left text-sm">
-
-              <thead>
-
-                <tr class="border-b border-gray-600">
-
-                  <th class="p-2">Nome</th>
-
-                  <th class="p-2">Status</th>
-
-                  <th class="p-2">Desde</th>
-
-                  <th class="p-2">Plano</th>
-
-                </tr>
-
-              </thead>
-
-              <tbody id="rel-table-alunos"></tbody>
-
-            </table>
-
-          </div>
-
-        </section>
-
-
-
-      </main>
-
-    </div>
-
-  </div>
-
-
-
-  <!-- DATALISTS -->
-
-  <datalist id="datalist-planos"></datalist>
-
-  <datalist id="datalist-prestadores"></datalist>
-
-  <datalist id="datalist-socios"></datalist>
-
-
-
-  <!-- ========================= MODAL ALUNO ========================= -->
-
-  <div id="modal-aluno" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
-
-    <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
-
-      <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
-
-        <div>
-
-          <h3 id="modal-aluno-title" class="text-lg font-bold text-white">Novo Aluno</h3>
-
-          <p class="text-xs text-gray-400">Salvo na unidade selecionada. (Se plano existir, gera receita automática.)</p>
-
         </div>
+      `;
 
-        <button id="btn-close-modal-aluno" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Fechar</button>
+      openModal({
+        title: isEdit ? "Editar Aluno" : "Novo Aluno",
+        subtitle: "Foto 3x4 menor + dados básicos",
+        bodyHtml: body
+      });
 
-      </div>
+      // set plano selecionado
+      const sel = $("mAlunoPlano");
+      const planoId = aluno?.planoId || "";
+      if (sel) sel.value = planoId;
 
+      // handlers foto
+      let fotoDataUrl = aluno?.fotoDataUrl || "";
 
+      $("mAlunoFotoTirar").addEventListener("click", () => $("mAlunoFotoInputCam").click());
+      $("mAlunoFotoAnexar").addEventListener("click", () => $("mAlunoFotoInputFile").click());
+      $("mAlunoFotoRemover").addEventListener("click", () => {
+        fotoDataUrl = "";
+        const box = $("mAlunoFotoPreview");
+        box.outerHTML = `<div id="mAlunoFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`;
+      });
 
-      <div class="p-4 flex-1 overflow-y-auto">
+      async function handleFile(input) {
+        const f = input.files?.[0];
+        if (!f) return;
+        fotoDataUrl = await cropResizeTo3x4(f, 300, 400, 0.85);
+        const prev = $("mAlunoFotoPreview");
+        if (prev.tagName?.toLowerCase() === "img") {
+          prev.src = fotoDataUrl;
+        } else {
+          prev.outerHTML = `<img id="mAlunoFotoPreview" src="${fotoDataUrl}" class="w-full h-full object-cover" />`;
+        }
+        input.value = "";
+      }
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      $("mAlunoFotoInputCam").addEventListener("change", (e) => handleFile(e.target));
+      $("mAlunoFotoInputFile").addEventListener("change", (e) => handleFile(e.target));
 
-          <div class="lg:col-span-3">
+      $("mAlunoSalvar").addEventListener("click", async () => {
+        const nome = safeStr($("mAlunoNome").value).trim();
+        if (!nome) return alert("Informe o nome do aluno.");
 
-            <div class="bg-[#111827] border border-gray-700 rounded-xl p-3">
+        const telefone = safeStr($("mAlunoTel").value).trim();
+        const planoIdSel = safeStr($("mAlunoPlano").value);
+        const plano = state.planos.find(p => p.id === planoIdSel);
 
-              <div class="text-sm font-semibold mb-2">Foto (3x4)</div>
+        const payload = {
+          nome,
+          telefone,
+          planoId: planoIdSel || "",
+          planoNome: plano ? safeStr(plano.nome) : "",
+          fotoDataUrl: fotoDataUrl || "",
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser,
+          schemaVersion: "5.0"
+        };
 
+        const col = db.collection("unidades").doc(currentUnit).collection("alunos");
+        if (isEdit) {
+          await col.doc(aluno.id).set(payload, { merge: true });
+        } else {
+          payload.createdAt = new Date().toISOString();
+          payload.createdBy = currentUser;
+          await col.add(payload);
+        }
 
+        closeModal();
+      });
+    }
 
-              <div class="w-full aspect-[3/4] bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+    /****************************************************************
+     * FUNCIONÁRIOS
+     ****************************************************************/
+    $("funcSearch").addEventListener("input", () => { pag.func.page = 1; renderFuncionarios(); });
+    $("funcPrev").addEventListener("click", () => { pag.func.page--; renderFuncionarios(); });
+    $("funcNext").addEventListener("click", () => { pag.func.page++; renderFuncionarios(); });
+    $("btnNovoFunc").addEventListener("click", () => openFuncModal(null));
 
-                <img id="aluno-foto-preview" alt="Foto 3x4" class="w-full h-full object-cover hidden" />
+    function renderFuncionarios() {
+      const q = $("funcSearch").value;
+      const filtered = filterByName(state.funcionarios, q);
+      const { items, page, pages, total } = paginate(filtered, pag.func.page, pag.func.perPage);
+      pag.func.page = page;
 
-                <div id="aluno-foto-placeholder" class="text-xs text-gray-400 px-3 text-center">Sem foto. Use “Tirar” ou “Anexar”.</div>
+      $("funcPageInfo").textContent = `Página ${page} / ${pages} (${total})`;
 
-              </div>
+      const tbody = $("funcTbody");
+      tbody.innerHTML = "";
 
+      items.forEach(f => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-zinc-900";
+        tr.innerHTML = `
+          <td class="py-2 pr-2">${tinyPhotoCell(f.fotoDataUrl)}</td>
+          <td class="py-2 pr-2 font-semibold">${safeStr(f.nome)}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(f.cargo || "")}</td>
+          <td class="py-2 pr-2 text-zinc-300 mono">${money(f.salario || 0)}</td>
+          <td class="py-2 pr-2">
+            <div class="flex gap-2">
+              <button class="${btnClass("dark")}" data-act="edit">Editar</button>
+              <button class="${btnClass("danger")}" data-act="del">Remover</button>
+            </div>
+          </td>
+        `;
+        tr.querySelector('[data-act="edit"]').addEventListener("click", () => openFuncModal(f));
+        tr.querySelector('[data-act="del"]').addEventListener("click", () => deleteFunc(f));
+        tbody.appendChild(tr);
+      });
+    }
 
+    async function deleteFunc(f) {
+      if (!confirm(`Remover funcionário "${f.nome}"?`)) return;
+      const ref = db.collection("unidades").doc(currentUnit).collection("funcionarios").doc(f.id);
+      await ref.delete();
+    }
 
-              <div class="mt-3 flex flex-wrap gap-2">
+    function refreshSelectsFuncionarios() {}
 
-                <button id="btn-foto-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">Tirar</button>
+    function openFuncModal(func) {
+      const isEdit = !!func;
+      const foto = func?.fotoDataUrl || "";
 
-                <button id="btn-foto-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Anexar</button>
-
-                <button id="btn-foto-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
-
-              </div>
-
-
-
-              <p class="mt-2 text-[11px] text-gray-400">Corte central (3:4).</p>
-
-
-
-              <input id="input-foto-camera" type="file" accept="image/*" capture="user" class="hidden" />
-
-              <input id="input-foto-file" type="file" accept="image/*" class="hidden" />
-
+      const body = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm text-zinc-300">Nome</label>
+              <input id="mFuncNome" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(func?.nome || "")}" />
             </div>
 
+            <div>
+              <label class="text-sm text-zinc-300">Cargo</label>
+              <input id="mFuncCargo" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(func?.cargo || "")}" />
+            </div>
+
+            <div>
+              <label class="text-sm text-zinc-300">Salário (R$)</label>
+              <input id="mFuncSal" type="number" step="0.01" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${Number(func?.salario || 0)}" />
+            </div>
           </div>
 
+          <div class="space-y-3">
+            <div class="text-sm text-zinc-300">Foto 3x4 (menor)</div>
 
+            <div class="flex gap-3 items-start">
+              <div class="w-[84px] h-[112px] rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center">
+                ${foto ? `<img id="mFuncFotoPreview" src="${foto}" class="w-full h-full object-cover" />` : `<div id="mFuncFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`}
+              </div>
 
-          <div class="lg:col-span-9">
+              <div class="flex flex-col gap-2">
+                <button id="mFuncFotoTirar" class="${btnClass("dark")}">Tirar</button>
+                <button id="mFuncFotoAnexar" class="${btnClass("dark")}">Anexar</button>
+                <button id="mFuncFotoRemover" class="${btnClass("danger")}">Remover</button>
+                <input id="mFuncFotoInputCam" type="file" accept="image/*" capture="user" class="hidden" />
+                <input id="mFuncFotoInputFile" type="file" accept="image/*" class="hidden" />
+              </div>
+            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="pt-2">
+              <button id="mFuncSalvar" class="${btnClass("primary")} w-full">${isEdit ? "Salvar alterações" : "Criar funcionário"}</button>
+            </div>
+          </div>
+        </div>
+      `;
 
+      openModal({
+        title: isEdit ? "Editar Funcionário" : "Novo Funcionário",
+        subtitle: "Foto 3x4 menor + dados básicos",
+        bodyHtml: body
+      });
+
+      let fotoDataUrl = func?.fotoDataUrl || "";
+
+      $("mFuncFotoTirar").addEventListener("click", () => $("mFuncFotoInputCam").click());
+      $("mFuncFotoAnexar").addEventListener("click", () => $("mFuncFotoInputFile").click());
+      $("mFuncFotoRemover").addEventListener("click", () => {
+        fotoDataUrl = "";
+        const box = $("mFuncFotoPreview");
+        box.outerHTML = `<div id="mFuncFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`;
+      });
+
+      async function handleFile(input) {
+        const f = input.files?.[0];
+        if (!f) return;
+        fotoDataUrl = await cropResizeTo3x4(f, 300, 400, 0.85);
+        const prev = $("mFuncFotoPreview");
+        if (prev.tagName?.toLowerCase() === "img") prev.src = fotoDataUrl;
+        else prev.outerHTML = `<img id="mFuncFotoPreview" src="${fotoDataUrl}" class="w-full h-full object-cover" />`;
+        input.value = "";
+      }
+
+      $("mFuncFotoInputCam").addEventListener("change", (e) => handleFile(e.target));
+      $("mFuncFotoInputFile").addEventListener("change", (e) => handleFile(e.target));
+
+      $("mFuncSalvar").addEventListener("click", async () => {
+        const nome = safeStr($("mFuncNome").value).trim();
+        if (!nome) return alert("Informe o nome do funcionário.");
+
+        const cargo = safeStr($("mFuncCargo").value).trim();
+        const salario = Number($("mFuncSal").value || 0);
+
+        const payload = {
+          nome, cargo, salario,
+          fotoDataUrl: fotoDataUrl || "",
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser,
+          schemaVersion: "5.0"
+        };
+
+        const col = db.collection("unidades").doc(currentUnit).collection("funcionarios");
+        if (isEdit) {
+          await col.doc(func.id).set(payload, { merge: true });
+        } else {
+          payload.createdAt = new Date().toISOString();
+          payload.createdBy = currentUser;
+          await col.add(payload);
+        }
+
+        closeModal();
+      });
+    }
+
+    /****************************************************************
+     * PRESTADORES
+     ****************************************************************/
+    $("prestSearch").addEventListener("input", () => { pag.prest.page = 1; renderPrestadores(); });
+    $("prestPrev").addEventListener("click", () => { pag.prest.page--; renderPrestadores(); });
+    $("prestNext").addEventListener("click", () => { pag.prest.page++; renderPrestadores(); });
+    $("btnNovoPrest").addEventListener("click", () => openPrestModal(null));
+
+    function renderPrestadores() {
+      const q = $("prestSearch").value;
+      const filtered = filterByName(state.prestadores, q);
+      const { items, page, pages, total } = paginate(filtered, pag.prest.page, pag.prest.perPage);
+      pag.prest.page = page;
+
+      $("prestPageInfo").textContent = `Página ${page} / ${pages} (${total})`;
+
+      const tbody = $("prestTbody");
+      tbody.innerHTML = "";
+
+      items.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-zinc-900";
+        tr.innerHTML = `
+          <td class="py-2 pr-2">${tinyPhotoCell(p.fotoDataUrl)}</td>
+          <td class="py-2 pr-2 font-semibold">${safeStr(p.nome)}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(p.tipo || "")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(p.contato || "")}</td>
+          <td class="py-2 pr-2">
+            <div class="flex gap-2">
+              <button class="${btnClass("dark")}" data-act="edit">Editar</button>
+              <button class="${btnClass("danger")}" data-act="del">Remover</button>
+            </div>
+          </td>
+        `;
+        tr.querySelector('[data-act="edit"]').addEventListener("click", () => openPrestModal(p));
+        tr.querySelector('[data-act="del"]').addEventListener("click", () => deletePrest(p));
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deletePrest(p) {
+      if (!confirm(`Remover prestador "${p.nome}"?`)) return;
+      const ref = db.collection("unidades").doc(currentUnit).collection("prestadores").doc(p.id);
+      await ref.delete();
+    }
+
+    function refreshSelectsPrestadores() {}
+
+    function openPrestModal(prest) {
+      const isEdit = !!prest;
+      const foto = prest?.fotoDataUrl || "";
+
+      const body = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm text-zinc-300">Nome</label>
+              <input id="mPrestNome" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(prest?.nome || "")}" />
+            </div>
+
+            <div>
+              <label class="text-sm text-zinc-300">Tipo</label>
+              <select id="mPrestTipo" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm">
+                <option value="Fixo">Fixo</option>
+                <option value="Temporário">Temporário</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-sm text-zinc-300">Contato</label>
+              <input id="mPrestContato" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(prest?.contato || "")}" />
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="text-sm text-zinc-300">Foto 3x4 (menor)</div>
+
+            <div class="flex gap-3 items-start">
+              <div class="w-[84px] h-[112px] rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center">
+                ${foto ? `<img id="mPrestFotoPreview" src="${foto}" class="w-full h-full object-cover" />` : `<div id="mPrestFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`}
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <button id="mPrestFotoTirar" class="${btnClass("dark")}">Tirar</button>
+                <button id="mPrestFotoAnexar" class="${btnClass("dark")}">Anexar</button>
+                <button id="mPrestFotoRemover" class="${btnClass("danger")}">Remover</button>
+                <input id="mPrestFotoInputCam" type="file" accept="image/*" capture="user" class="hidden" />
+                <input id="mPrestFotoInputFile" type="file" accept="image/*" class="hidden" />
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button id="mPrestSalvar" class="${btnClass("primary")} w-full">${isEdit ? "Salvar alterações" : "Criar prestador"}</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      openModal({
+        title: isEdit ? "Editar Prestador" : "Novo Prestador",
+        subtitle: "Foto 3x4 menor + dados básicos",
+        bodyHtml: body
+      });
+
+      const sel = $("mPrestTipo");
+      if (sel) sel.value = prest?.tipo || "Fixo";
+
+      let fotoDataUrl = prest?.fotoDataUrl || "";
+
+      $("mPrestFotoTirar").addEventListener("click", () => $("mPrestFotoInputCam").click());
+      $("mPrestFotoAnexar").addEventListener("click", () => $("mPrestFotoInputFile").click());
+      $("mPrestFotoRemover").addEventListener("click", () => {
+        fotoDataUrl = "";
+        const box = $("mPrestFotoPreview");
+        box.outerHTML = `<div id="mPrestFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`;
+      });
+
+      async function handleFile(input) {
+        const f = input.files?.[0];
+        if (!f) return;
+        fotoDataUrl = await cropResizeTo3x4(f, 300, 400, 0.85);
+        const prev = $("mPrestFotoPreview");
+        if (prev.tagName?.toLowerCase() === "img") prev.src = fotoDataUrl;
+        else prev.outerHTML = `<img id="mPrestFotoPreview" src="${fotoDataUrl}" class="w-full h-full object-cover" />`;
+        input.value = "";
+      }
+
+      $("mPrestFotoInputCam").addEventListener("change", (e) => handleFile(e.target));
+      $("mPrestFotoInputFile").addEventListener("change", (e) => handleFile(e.target));
+
+      $("mPrestSalvar").addEventListener("click", async () => {
+        const nome = safeStr($("mPrestNome").value).trim();
+        if (!nome) return alert("Informe o nome do prestador.");
+
+        const tipo = safeStr($("mPrestTipo").value);
+        const contato = safeStr($("mPrestContato").value).trim();
+
+        const payload = {
+          nome, tipo, contato,
+          fotoDataUrl: fotoDataUrl || "",
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser,
+          schemaVersion: "5.0"
+        };
+
+        const col = db.collection("unidades").doc(currentUnit).collection("prestadores");
+        if (isEdit) {
+          await col.doc(prest.id).set(payload, { merge: true });
+        } else {
+          payload.createdAt = new Date().toISOString();
+          payload.createdBy = currentUser;
+          await col.add(payload);
+        }
+
+        closeModal();
+      });
+    }
+
+    /****************************************************************
+     * PLANOS
+     ****************************************************************/
+    $("btnNovoPlano").addEventListener("click", () => openPlanoModal(null));
+
+    function renderPlanos() {
+      const tbody = $("planosTbody");
+      tbody.innerHTML = "";
+
+      state.planos.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-zinc-900";
+        tr.innerHTML = `
+          <td class="py-2 pr-2 font-semibold">${safeStr(p.nome)}</td>
+          <td class="py-2 pr-2 mono">${money(p.valor || 0)}</td>
+          <td class="py-2 pr-2">${p.ativo ? "Sim" : "Não"}</td>
+          <td class="py-2 pr-2">
+            <div class="flex gap-2">
+              <button class="${btnClass("dark")}" data-act="edit">Editar</button>
+              <button class="${btnClass("danger")}" data-act="del">Remover</button>
+            </div>
+          </td>
+        `;
+        tr.querySelector('[data-act="edit"]').addEventListener("click", () => openPlanoModal(p));
+        tr.querySelector('[data-act="del"]').addEventListener("click", () => deletePlano(p));
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deletePlano(p) {
+      if (!confirm(`Remover plano "${p.nome}"?`)) return;
+      const ref = db.collection("unidades").doc(currentUnit).collection("planos").doc(p.id);
+      await ref.delete();
+    }
+
+    function openPlanoModal(plano) {
+      const isEdit = !!plano;
+
+      const body = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm text-zinc-300">Nome</label>
+              <input id="mPlanoNome" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(plano?.nome || "")}" />
+            </div>
+            <div>
+              <label class="text-sm text-zinc-300">Valor (R$)</label>
+              <input id="mPlanoValor" type="number" step="0.01" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${Number(plano?.valor || 0)}" />
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm text-zinc-300">Ativo</label>
+              <select id="mPlanoAtivo" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm">
+                <option value="true">Sim</option>
+                <option value="false">Não</option>
+              </select>
+            </div>
+            <div class="pt-2">
+              <button id="mPlanoSalvar" class="${btnClass("primary")} w-full">${isEdit ? "Salvar alterações" : "Criar plano"}</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      openModal({
+        title: isEdit ? "Editar Plano" : "Novo Plano",
+        subtitle: "Cadastro básico de plano",
+        bodyHtml: body
+      });
+
+      $("mPlanoAtivo").value = String(!!plano?.ativo);
+
+      $("mPlanoSalvar").addEventListener("click", async () => {
+        const nome = safeStr($("mPlanoNome").value).trim();
+        if (!nome) return alert("Informe o nome do plano.");
+
+        const valor = Number($("mPlanoValor").value || 0);
+        const ativo = $("mPlanoAtivo").value === "true";
+
+        const payload = {
+          nome, valor, ativo,
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser,
+          schemaVersion: "5.0"
+        };
+
+        const col = db.collection("unidades").doc(currentUnit).collection("planos");
+        if (isEdit) {
+          await col.doc(plano.id).set(payload, { merge: true });
+        } else {
+          payload.createdAt = new Date().toISOString();
+          payload.createdBy = currentUser;
+          await col.add(payload);
+        }
+        closeModal();
+      });
+    }
+
+    /****************************************************************
+     * LANÇAMENTOS (com Documento 3x4)
+     ****************************************************************/
+    $("btnNovoLanc").addEventListener("click", () => openLancModal(null));
+
+    function isLancNoMes(l, ym) {
+      if (!ym) return true;
+      const { y, m } = ym;
+      const ini = firstDayOfMonth(y,m).getTime();
+      const fim = lastDayOfMonth(y,m).getTime();
+
+      if (l.data && /^\d{4}-\d{2}-\d{2}$/.test(l.data)) {
+        const tt = new Date(l.data + "T00:00:00").getTime();
+        return tt >= ini && tt <= fim;
+      }
+      const t = new Date(l.data || l.createdAt || 0).getTime();
+      return t >= ini && t <= fim;
+    }
+
+    function renderLancamentos() {
+      const ym = ymFromDateInput($("lancMonth").value);
+      const items = state.lancamentos.filter(l => isLancNoMes(l, ym));
+
+      const tbody = $("lancTbody");
+      tbody.innerHTML = "";
+
+      items.forEach(l => {
+        const tipo = (l.tipo || "").toUpperCase();
+        const tipoBadge = tipo === "RECEITA"
+          ? `<span class="px-2 py-1 rounded-lg bg-green-950/40 border border-green-900/40 text-green-200 text-xs">RECEITA</span>`
+          : `<span class="px-2 py-1 rounded-lg bg-red-950/40 border border-red-900/40 text-red-200 text-xs">DESPESA</span>`;
+
+        const docThumb = l.documentoDataUrl
+          ? `<img src="${l.documentoDataUrl}" class="w-[32px] h-[44px] object-cover rounded-lg border border-zinc-800" />`
+          : `<div class="w-[32px] h-[44px] rounded-lg bg-zinc-900 border border-zinc-800"></div>`;
+
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-zinc-900";
+        tr.innerHTML = `
+          <td class="py-2 pr-2">${safeStr(l.data || "")}</td>
+          <td class="py-2 pr-2">${tipoBadge}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(l.categoria || "")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(l.descricao || "")}</td>
+          <td class="py-2 pr-2 mono ${tipo==="RECEITA" ? "text-green-300" : "text-red-300"}">${money(l.valor || 0)}</td>
+          <td class="py-2 pr-2">${docThumb}</td>
+          <td class="py-2 pr-2">
+            <div class="flex gap-2">
+              <button class="${btnClass("dark")}" data-act="edit">Editar</button>
+              <button class="${btnClass("danger")}" data-act="del">Remover</button>
+            </div>
+          </td>
+        `;
+
+        tr.querySelector('[data-act="edit"]').addEventListener("click", () => openLancModal(l));
+        tr.querySelector('[data-act="del"]').addEventListener("click", () => deleteLanc(l));
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deleteLanc(l) {
+      if (!confirm("Remover lançamento?")) return;
+      const ref = db.collection("unidades").doc(currentUnit).collection("lancamentos").doc(l.id);
+      await ref.delete();
+    }
+
+    function openLancModal(lanc) {
+      const isEdit = !!lanc;
+      const today = toISODate(new Date());
+
+      const body = `
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
               <div>
-
-                <label class="text-sm text-gray-300">Nome completo *</label>
-
-                <input id="aluno-nome" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Nome do aluno" />
-
+                <label class="text-sm text-zinc-300">Data</label>
+                <input id="mLancData" type="date" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(lanc?.data || today)}" />
               </div>
 
               <div>
-
-                <label class="text-sm text-gray-300">Nascimento</label>
-
-                <input id="aluno-nascimento" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
-
-              </div>
-
-              <div>
-
-                <label class="text-sm text-gray-300">CPF</label>
-
-                <input id="aluno-cpf" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="CPF" />
-
-              </div>
-
-              <div>
-
-                <label class="text-sm text-gray-300">E-mail</label>
-
-                <input id="aluno-email" type="email" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="email@dominio.com" />
-
-              </div>
-
-              <div>
-
-                <label class="text-sm text-gray-300">Telefone principal</label>
-
-                <input id="aluno-tel1" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="(21) 99999-9999" />
-
-              </div>
-
-              <div>
-
-                <label class="text-sm text-gray-300">Telefone secundário</label>
-
-                <input id="aluno-tel2" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="(21) 99999-9999" />
-
-              </div>
-
-              <div class="md:col-span-2">
-
-                <label class="text-sm text-gray-300">Endereço</label>
-
-                <input id="aluno-endereco" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Rua, número, bairro, cidade" />
-
-              </div>
-
-              <div>
-
-                <label class="text-sm text-gray-300">Status</label>
-
-                <select id="aluno-status" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
-
-                  <option value="Ativo">Ativo</option>
-
-                  <option value="Trancado">Trancado</option>
-
-                  <option value="Cancelado">Cancelado</option>
-
+                <label class="text-sm text-zinc-300">Tipo</label>
+                <select id="mLancTipo" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm">
+                  <option value="RECEITA">RECEITA</option>
+                  <option value="DESPESA">DESPESA</option>
                 </select>
-
               </div>
-
-              <div>
-
-                <label class="text-sm text-gray-300">Desde quando é aluno</label>
-
-                <input id="aluno-desde" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
-
-                <p class="mt-1 text-[11px] text-gray-400">Se vazio, usa a data de criação.</p>
-
-              </div>
-
             </div>
 
-
-
-            <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
-
-              <div class="text-sm font-semibold">Plano</div>
-
-              <div class="text-[11px] text-gray-400">Plano atual + histórico.</div>
-
-
-
-              <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-
-                <div>
-
-                  <label class="text-sm text-gray-300">Plano atual</label>
-
-                  <input id="plano-atual-nome" list="datalist-planos" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Mensal, Trimestral..." />
-
-                </div>
-
-                <div>
-
-                  <label class="text-sm text-gray-300">Início</label>
-
-                  <input id="plano-atual-inicio" type="date" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" />
-
-                </div>
-
-                <div>
-
-                  <label class="text-sm text-gray-300">Fim</label>
-
-                  <input id="plano-atual-fim" type="date" class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" />
-
-                </div>
-
-              </div>
-
-
-
-              <div class="mt-4 flex items-center justify-between">
-
-                <div class="text-sm font-semibold">Histórico de planos</div>
-
-                <button id="btn-add-hist" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">+ Adicionar</button>
-
-              </div>
-
-
-
-              <div id="hist-container" class="mt-3 space-y-2"></div>
-
+            <div>
+              <label class="text-sm text-zinc-300">Categoria</label>
+              <input id="mLancCat" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(lanc?.categoria || "")}" placeholder="ex.: Mensalidade, Folha, Aluguel..." />
             </div>
 
-
-
-            <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
-
-              <div class="flex items-center justify-between gap-3">
-
-                <div>
-
-                  <div class="text-sm font-semibold">Documento (foto)</div>
-
-                  <div class="text-[11px] text-gray-400">Identidade/comprovante.</div>
-
-                </div>
-
-                <div class="flex flex-wrap gap-2">
-
-                  <button id="btn-doc-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">Tirar</button>
-
-                  <button id="btn-doc-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Anexar</button>
-
-                  <button id="btn-doc-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
-
-                </div>
-
-              </div>
-
-
-
-              <div class="mt-3 flex items-start gap-3">
-
-                <div class="w-28 h-28 bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
-
-                  <img id="aluno-doc-preview" alt="Documento" class="w-full h-full object-cover hidden" />
-
-                  <div id="aluno-doc-placeholder" class="text-[11px] text-gray-400 px-2 text-center">Sem documento</div>
-
-                </div>
-
-                <div class="text-xs text-gray-300">
-
-                  <div id="doc-info" class="text-gray-400">Nenhum documento anexado.</div>
-
-                  <button id="btn-doc-abrir" class="mt-2 px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold hidden">Abrir</button>
-
-                </div>
-
-
-
-                <input id="input-doc-camera" type="file" accept="image/*" capture="environment" class="hidden" />
-
-                <input id="input-doc-file" type="file" accept="image/*" class="hidden" />
-
-              </div>
-
+            <div>
+              <label class="text-sm text-zinc-300">Descrição</label>
+              <input id="mLancDesc" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(lanc?.descricao || "")}" />
             </div>
 
-
-
-            <p id="modal-aluno-error" class="mt-3 text-sm text-red-300 hidden"></p>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-
-      <div class="flex items-center justify-between gap-2 p-4 border-t border-gray-700 bg-[#0b1220] rounded-b-2xl">
-
-        <button id="btn-print-aluno" class="px-4 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Imprimir ficha</button>
-
-        <div class="flex items-center gap-2">
-
-          <button id="btn-cancel-modal-aluno" class="px-4 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Cancelar</button>
-
-          <button id="btn-save-aluno" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">Salvar</button>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-
-
-  <!-- ========================= MODAL FUNCIONÁRIO ========================= -->
-
-  <div id="modal-func" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
-
-    <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
-
-      <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
-
-        <div>
-
-          <h3 id="modal-func-title" class="text-lg font-bold text-white">Novo Funcionário</h3>
-
-          <p class="text-xs text-gray-400">Salvo na unidade selecionada. (Gera despesa automática do salário.)</p>
-
-        </div>
-
-        <button id="btn-close-modal-func" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Fechar</button>
-
-      </div>
-
-
-
-      <div class="p-4 flex-1 overflow-y-auto">
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-
-          <div class="lg:col-span-3">
-
-            <div class="bg-[#111827] border border-gray-700 rounded-xl p-3">
-
-              <div class="text-sm font-semibold mb-2">Foto (3x4)</div>
-
-
-
-              <div class="w-full aspect-[3/4] bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
-
-                <img id="func-foto-preview" alt="Foto 3x4" class="w-full h-full object-cover hidden" />
-
-                <div id="func-foto-placeholder" class="text-xs text-gray-400 px-3 text-center">Sem foto. Use “Tirar” ou “Anexar”.</div>
-
-              </div>
-
-
-
-              <div class="mt-3 flex flex-wrap gap-2">
-
-                <button id="btn-func-foto-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">Tirar</button>
-
-                <button id="btn-func-foto-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Anexar</button>
-
-                <button id="btn-func-foto-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
-
-              </div>
-
-
-
-              <p class="mt-2 text-[11px] text-gray-400">Corte central (3:4).</p>
-
-
-
-              <input id="input-func-foto-camera" type="file" accept="image/*" capture="user" class="hidden" />
-
-              <input id="input-func-foto-file" type="file" accept="image/*" class="hidden" />
-
+            <div>
+              <label class="text-sm text-zinc-300">Valor (R$)</label>
+              <input id="mLancValor" type="number" step="0.01" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${Number(lanc?.valor || 0)}" />
             </div>
 
-          </div>
-
-
-
-          <div class="lg:col-span-9">
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-
-                <label class="text-sm text-gray-300">Nome *</label>
-
-                <input id="func-nome" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Nome do funcionário" />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Cargo *</label>
-
-                <input id="func-cargo" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Recepção, Professor..." />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Data de contratação</label>
-
-                <input id="func-contratado" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
-
-                <p class="mt-1 text-[11px] text-gray-400">Se vazio, usa a data de criação.</p>
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">CPF</label>
-
-                <input id="func-cpf" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="CPF" />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">E-mail</label>
-
-                <input id="func-email" type="email" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="email@dominio.com" />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Telefone</label>
-
-                <input id="func-tel1" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="(21) 99999-9999" />
-
-              </div>
-
-
-
-              <div class="md:col-span-2">
-
-                <label class="text-sm text-gray-300">Endereço</label>
-
-                <input id="func-endereco" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Rua, número, bairro, cidade" />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Status</label>
-
-                <select id="func-status" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
-
-                  <option value="Ativo">Ativo</option>
-
-                  <option value="Afastado">Afastado</option>
-
-                  <option value="Desligado">Desligado</option>
-
+                <label class="text-sm text-zinc-300">Aluno (opcional)</label>
+                <select id="mLancAluno" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm">
+                  <option value="">(nenhum)</option>
+                  ${state.alunos.map(a => `<option value="${a.id}">${safeStr(a.nome)}</option>`).join("")}
                 </select>
-
               </div>
-
-
 
               <div>
-
-                <label class="text-sm text-gray-300">Salário base (R$)</label>
-
-                <input id="func-salario-base" type="number" step="0.01" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: 1412" />
-
+                <label class="text-sm text-zinc-300">Funcionário (opcional)</label>
+                <select id="mLancFunc" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm">
+                  <option value="">(nenhum)</option>
+                  ${state.funcionarios.map(f => `<option value="${f.id}">${safeStr(f.nome)}</option>`).join("")}
+                </select>
               </div>
-
-
 
               <div>
-
-                <label class="text-sm text-gray-300">Adicional desta unidade (R$)</label>
-
-                <input id="func-adicional" type="number" step="0.01" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: 150" />
-
+                <label class="text-sm text-zinc-300">Prestador (opcional)</label>
+                <select id="mLancPrest" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm">
+                  <option value="">(nenhum)</option>
+                  ${state.prestadores.map(p => `<option value="${p.id}">${safeStr(p.nome)}</option>`).join("")}
+                </select>
               </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Salário total</label>
-
-                <input id="func-salario-total" disabled class="mt-1 w-full bg-[#0b1220] border border-gray-700 rounded-lg p-2 text-white" />
-
-              </div>
-
-
-
-              <div class="md:col-span-2">
-
-                <label class="text-sm text-gray-300">Observações</label>
-
-                <input id="func-obs" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: escala, restrições, etc." />
-
-              </div>
-
             </div>
 
-
-
-            <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
-
-              <div class="flex items-center justify-between gap-3">
-
-                <div>
-
-                  <div class="text-sm font-semibold">Documento (foto)</div>
-
-                  <div class="text-[11px] text-gray-400">Ex: atestado médico, documentos.</div>
-
-                </div>
-
-                <div class="flex flex-wrap gap-2">
-
-                  <button id="btn-func-doc-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">Tirar</button>
-
-                  <button id="btn-func-doc-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Anexar</button>
-
-                  <button id="btn-func-doc-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
-
-                </div>
-
-              </div>
-
-
-
-              <div class="mt-3 flex items-start gap-3">
-
-                <div class="w-28 h-28 bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
-
-                  <img id="func-doc-preview" alt="Documento" class="w-full h-full object-cover hidden" />
-
-                  <div id="func-doc-placeholder" class="text-[11px] text-gray-400 px-2 text-center">Sem documento</div>
-
-                </div>
-
-                <div class="text-xs text-gray-300">
-
-                  <div id="func-doc-info" class="text-gray-400">Nenhum documento anexado.</div>
-
-                  <button id="btn-func-doc-abrir" class="mt-2 px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold hidden">Abrir</button>
-
-                </div>
-
-
-
-                <input id="input-func-doc-camera" type="file" accept="image/*" capture="environment" class="hidden" />
-
-                <input id="input-func-doc-file" type="file" accept="image/*" class="hidden" />
-
-              </div>
-
+            <div class="pt-2">
+              <button id="mLancSalvar" class="${btnClass("primary")} w-full">${isEdit ? "Salvar alterações" : "Criar lançamento"}</button>
             </div>
-
-
-
-            <p id="modal-func-error" class="mt-3 text-sm text-red-300 hidden"></p>
-
           </div>
 
-        </div>
+          <!-- DOCUMENTO 3x4 NO FUNDO -->
+          <div class="space-y-3">
+            <div class="text-sm text-zinc-300">Documento (3x4)</div>
 
-      </div>
+            <div class="card rounded-2xl p-4">
+              <div class="flex gap-3 items-start">
+                <div class="w-[150px] h-[200px] rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center">
+                  ${
+                    lanc?.documentoDataUrl
+                      ? `<img id="mLancDocPreview" src="${lanc.documentoDataUrl}" class="w-full h-full object-cover" />`
+                      : `<div id="mLancDocPreview" class="text-xs text-zinc-500">Sem documento</div>`
+                  }
+                </div>
 
-
-
-      <div class="flex items-center justify-between gap-2 p-4 border-t border-gray-700 bg-[#0b1220] rounded-b-2xl">
-
-        <button id="btn-print-func" class="px-4 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Imprimir ficha</button>
-
-        <div class="flex items-center gap-2">
-
-          <button id="btn-cancel-modal-func" class="px-4 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Cancelar</button>
-
-          <button id="btn-save-func" class="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-semibold">Salvar</button>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-
-
-  <!-- ========================= MODAL PRESTADOR ========================= -->
-
-  <div id="modal-prest" class="fixed inset-0 hidden z-50 items-center justify-center p-4 bg-black/60">
-
-    <div class="w-full max-w-5xl bg-[#0f172a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
-
-      <div class="flex items-center justify-between gap-3 p-4 border-b border-gray-700">
-
-        <div>
-
-          <h3 id="modal-prest-title" class="text-lg font-bold text-white">Novo Prestador</h3>
-
-          <p class="text-xs text-gray-400">Fixo (contrato) ou Temporário (período). Pode salvar foto/documento.</p>
-
-        </div>
-
-        <button id="btn-close-modal-prest" class="px-3 py-2 rounded-lg bg-[#1f2937] hover:bg-[#334155] text-sm">Fechar</button>
-
-      </div>
-
-
-
-      <div class="p-4 flex-1 overflow-y-auto">
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-
-          <div class="lg:col-span-3">
-
-            <div class="bg-[#111827] border border-gray-700 rounded-xl p-3">
-
-              <div class="text-sm font-semibold mb-2">Foto (3x4)</div>
-
-
-
-              <div class="w-full aspect-[3/4] bg-[#0b1220] border border-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
-
-                <img id="prest-foto-preview" alt="Foto 3x4" class="w-full h-full object-cover hidden" />
-
-                <div id="prest-foto-placeholder" class="text-xs text-gray-400 px-3 text-center">Sem foto.</div>
-
+                <div class="flex flex-col gap-2">
+                  <button id="mLancDocTirar" class="${btnClass("dark")}">Tirar</button>
+                  <button id="mLancDocAnexar" class="${btnClass("dark")}">Anexar</button>
+                  <button id="mLancDocRemover" class="${btnClass("danger")}">Remover</button>
+                  <input id="mLancDocInputCam" type="file" accept="image/*" capture="environment" class="hidden" />
+                  <input id="mLancDocInputFile" type="file" accept="image/*" class="hidden" />
+                </div>
               </div>
 
-
-
-              <div class="mt-3 flex flex-wrap gap-2">
-
-                <button id="btn-prest-foto-tirar" class="px-3 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold">Tirar</button>
-
-                <button id="btn-prest-foto-anexar" class="px-3 py-2 rounded-lg bg-[#334155] hover:bg-[#475569] text-white text-sm font-semibold">Anexar</button>
-
-                <button id="btn-prest-foto-remover" class="px-3 py-2 rounded-lg bg-[#7f1d1d] hover:bg-[#991b1b] text-white text-sm font-semibold">Remover</button>
-
+              <div class="text-xs text-zinc-500 mt-3">
+                Guardado em base64 no Firestore (pronto para auditoria/IA no futuro).<br/>
+                Dica: depois você pode migrar para Firebase Storage sem quebrar o legado.
               </div>
-
-
-
-              <input id="input-prest-foto-camera" type="file" accept="image/*" capture="user" class="hidden" />
-
-              <input id="input-prest-foto-file" type="file" accept="image/*" class="hidden" />
-
             </div>
+          </div>
+        </div>
+      `;
 
+      openModal({
+        title: isEdit ? "Editar Lançamento" : "Novo Lançamento",
+        subtitle: "Inclui Documento 3x4 (Tirar/Anexar/Remover)",
+        bodyHtml: body
+      });
+
+      $("mLancTipo").value = safeStr(lanc?.tipo || "RECEITA");
+
+      // selects vínculos
+      if ($("mLancAluno")) $("mLancAluno").value = safeStr(lanc?.alunoId || "");
+      if ($("mLancFunc")) $("mLancFunc").value = safeStr(lanc?.funcionarioId || "");
+      if ($("mLancPrest")) $("mLancPrest").value = safeStr(lanc?.prestadorId || "");
+
+      let docDataUrl = lanc?.documentoDataUrl || "";
+
+      $("mLancDocTirar").addEventListener("click", () => $("mLancDocInputCam").click());
+      $("mLancDocAnexar").addEventListener("click", () => $("mLancDocInputFile").click());
+      $("mLancDocRemover").addEventListener("click", () => {
+        docDataUrl = "";
+        const prev = $("mLancDocPreview");
+        prev.outerHTML = `<div id="mLancDocPreview" class="text-xs text-zinc-500">Sem documento</div>`;
+      });
+
+      async function handleDocFile(input) {
+        const f = input.files?.[0];
+        if (!f) return;
+        docDataUrl = await cropResizeTo3x4(f, 450, 600, 0.85); // um pouco maior pra comprovante
+        const prev = $("mLancDocPreview");
+        if (prev.tagName?.toLowerCase() === "img") prev.src = docDataUrl;
+        else prev.outerHTML = `<img id="mLancDocPreview" src="${docDataUrl}" class="w-full h-full object-cover" />`;
+        input.value = "";
+      }
+
+      $("mLancDocInputCam").addEventListener("change", (e) => handleDocFile(e.target));
+      $("mLancDocInputFile").addEventListener("change", (e) => handleDocFile(e.target));
+
+      $("mLancSalvar").addEventListener("click", async () => {
+        const data = $("mLancData").value;
+        if (!data) return alert("Informe a data.");
+
+        const tipo = $("mLancTipo").value;
+        const categoria = safeStr($("mLancCat").value).trim();
+        const descricao = safeStr($("mLancDesc").value).trim();
+        const valor = Number($("mLancValor").value || 0);
+
+        if (!tipo) return alert("Informe o tipo.");
+        if (!categoria) return alert("Informe a categoria.");
+        if (!descricao) return alert("Informe a descrição.");
+        if (!valor || valor <= 0) return alert("Informe um valor válido (> 0).");
+
+        const alunoId = safeStr($("mLancAluno").value);
+        const funcionarioId = safeStr($("mLancFunc").value);
+        const prestadorId = safeStr($("mLancPrest").value);
+
+        const aluno = state.alunos.find(a => a.id === alunoId);
+        const func = state.funcionarios.find(f => f.id === funcionarioId);
+        const prest = state.prestadores.find(p => p.id === prestadorId);
+
+        const payload = {
+          data,
+          tipo,
+          categoria,
+          descricao,
+          valor,
+
+          alunoId: alunoId || "",
+          alunoNome: aluno ? safeStr(aluno.nome) : "",
+
+          funcionarioId: funcionarioId || "",
+          funcionarioNome: func ? safeStr(func.nome) : "",
+
+          prestadorId: prestadorId || "",
+          prestadorNome: prest ? safeStr(prest.nome) : "",
+
+          documentoDataUrl: docDataUrl || "",
+
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser,
+          schemaVersion: "5.0"
+        };
+
+        const col = db.collection("unidades").doc(currentUnit).collection("lancamentos");
+        if (isEdit) {
+          await col.doc(lanc.id).set(payload, { merge: true });
+        } else {
+          payload.createdAt = new Date().toISOString();
+          payload.createdBy = currentUser;
+          await col.add(payload);
+        }
+
+        closeModal();
+      });
+    }
+
+    /****************************************************************
+     * RETIRADAS
+     ****************************************************************/
+    $("btnNovaRetirada").addEventListener("click", () => openRetModal(null));
+
+    function renderRetiradas() {
+      const tbody = $("retTbody");
+      tbody.innerHTML = "";
+
+      state.retiradas.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-zinc-900";
+        tr.innerHTML = `
+          <td class="py-2 pr-2">${safeStr(r.data || "")}</td>
+          <td class="py-2 pr-2 font-semibold">${safeStr(r.nome || "")}</td>
+          <td class="py-2 pr-2 mono text-zinc-200">${money(r.valor || 0)}</td>
+          <td class="py-2 pr-2">
+            <div class="flex gap-2">
+              <button class="${btnClass("dark")}" data-act="edit">Editar</button>
+              <button class="${btnClass("danger")}" data-act="del">Remover</button>
+            </div>
+          </td>
+        `;
+        tr.querySelector('[data-act="edit"]').addEventListener("click", () => openRetModal(r));
+        tr.querySelector('[data-act="del"]').addEventListener("click", () => deleteRet(r));
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deleteRet(r) {
+      if (!confirm("Remover retirada?")) return;
+      const ref = db.collection("unidades").doc(currentUnit).collection("retiradas").doc(r.id);
+      await ref.delete();
+    }
+
+    function openRetModal(ret) {
+      const isEdit = !!ret;
+      const today = toISODate(new Date());
+
+      const body = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm text-zinc-300">Data</label>
+              <input id="mRetData" type="date" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(ret?.data || today)}" />
+            </div>
+            <div>
+              <label class="text-sm text-zinc-300">Nome</label>
+              <input id="mRetNome" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(ret?.nome || "")}" />
+            </div>
           </div>
 
-
-
-          <div class="lg:col-span-9">
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              <div>
-
-                <label class="text-sm text-gray-300">Nome *</label>
-
-                <input id="prest-nome" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Nome do prestador" />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Tipo *</label>
-
-                <select id="prest-tipo" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
-
-                  <option value="FIXO">FIXO (Contrato)</option>
-
-                  <option value="TEMPORARIO">TEMPORÁRIO (Período)</option>
-
-                </select>
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Serviço *</label>
-
-                <input id="prest-servico" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Ex: Eletricista, Contador, Manutenção..." />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Contato</label>
-
-                <input id="prest-contato" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Telefone / e-mail" />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Documento (CPF/CNPJ)</label>
-
-                <input id="prest-doc" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="CPF ou CNPJ" />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Status</label>
-
-                <select id="prest-status" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white">
-
-                  <option value="ATIVO">Ativo</option>
-
-                  <option value="INATIVO">Inativo</option>
-
-                </select>
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Início</label>
-
-                <input id="prest-inicio" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Fim (temporário)</label>
-
-                <input id="prest-fim" type="date" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" />
-
-              </div>
-
-
-
-              <div>
-
-                <label class="text-sm text-gray-300">Valor (R$)</label>
-
-                <input id="prest-valor" type="number" step="0.01" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Opcional" />
-
-              </div>
-
-
-
-              <div class="md:col-span-2">
-
-                <label class="text-sm text-gray-300">Observações</label>
-
-                <input id="prest-obs" class="mt-1 w-full bg-[#111827] border border-gray-700 rounded-lg p-2 text-white" placeholder="Opcional" />
-
-              </div>
-
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm text-zinc-300">Valor (R$)</label>
+              <input id="mRetValor" type="number" step="0.01" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${Number(ret?.valor || 0)}" />
             </div>
+            <div class="pt-2">
+              <button id="mRetSalvar" class="${btnClass("primary")} w-full">${isEdit ? "Salvar alterações" : "Criar retirada"}</button>
+            </div>
+          </div>
+        </div>
+      `;
 
+      openModal({
+        title: isEdit ? "Editar Retirada" : "Nova Retirada",
+        subtitle: "Afeta saldo/caixa sem virar despesa operacional",
+        bodyHtml: body
+      });
 
+      $("mRetSalvar").addEventListener("click", async () => {
+        const data = $("mRetData").value;
+        const nome = safeStr($("mRetNome").value).trim();
+        const valor = Number($("mRetValor").value || 0);
 
-            <div class="mt-4 bg-[#111827] border border-gray-700 rounded-xl p-3">
+        if (!data) return alert("Informe a data.");
+        if (!nome) return alert("Informe o nome.");
+        if (!valor || valor <= 0) return alert("Informe um valor válido (> 0).");
 
-              <div class="flex items-center justify-between gap-3">
+        const payload = {
+          data, nome, valor,
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser,
+          schemaVersion: "5.0"
+        };
 
-                <div>
+        const col = db.collection("unidades").doc(currentUnit).collection("retiradas");
+        if (isEdit) {
+          await col.doc(ret.id).set(payload, { merge: true });
+        } else {
+          payload.createdAt = new Date().toISOString();
+          payload.createdBy = currentUser;
+          await col.add(payload);
+        }
 
-                  <div class="text-sm font-semibold">Documento (foto)</div>
+        closeModal();
+      });
+    }
 
-                  <div class="text-[11px] text-gray-400">Contrato, recibo, identidade, etc.</div>
+    /****************************************************************
+     * RELATÓRIOS (prévia + impressão simples)
+     ****************************************************************/
+    $("btnGerarRelatorio").addEventListener("click", () => {
+      const txt = buildReportText();
+      $("repPreview").textContent = txt;
 
-                </div>
+      // print
+      const w = window.open("", "_blank");
+      if (!w) return alert("Popup bloqueado. Permita popups para imprimir.");
+      const safe = (s) => (s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      w.document.write(`
+        <html><head><title>Relatório - SGB</title>
+          <meta charset="UTF-8" />
+          <style>
+            body { font-family: Arial, sans-serif; padding: 18px; }
+            pre { white-space: pre-wrap; font-size: 12px; }
+          </style>
+        </head><body>
+          <h2>Relatório - ${safe(currentUnit)}</h2>
+          <pre>${safe(txt)}</pre>
+          <script>window.print();</script>
+        </body></html>
+      `);
+      w.document.close();
+    });
+
+    function renderRelatoriosPreview() {
+      $("repPreview").textContent = buildReportText();
+    }
+
+    function buildReportText() {
+      const start = $("repStart").value;
+      const end = $("repEnd").value;
+      const tipo = $("repTipo").value;
+
+      const s = start ? new Date(start + "T00:00:00").getTime() : 0;
+      const e = end ? new Date(end + "T23:59:59").getTime() : Date.now();
+
+      const lancs = state.lancamentos.filter(l => {
+        if (l.data && /^\d{4}-\d{2}-\d{2}$/.test(l.data)) {
+          const t = new Date(l.data + "T00:00:00").getTime();
+          return t >= s && t <= e;
+        }
+        const t = new Date(l.data || l.createdAt || 0).getTime();
+        return t >= s && t <= e;
+      });
+
+      const rets = state.retiradas.filter(r => {
+        const t = r.data && /^\d{4}-\d{2}-\d{2}$/.test(r.data)
+          ? new Date(r.data + "T00:00:00").getTime()
+          : new Date(r.data || r.createdAt || 0).getTime();
+        return t >= s && t <= e;
+      });
+
+      const receita = sumByTipo(lancs, "RECEITA");
+      const despesa = sumByTipo(lancs, "DESPESA");
+      const totalRet = rets.reduce((a,x)=>a+Number(x.valor||0),0);
+      const saldoOp = receita - despesa;     // operacional
+      const saldoCaixa = saldoOp - totalRet; // caixa após retiradas
+
+      let out = "";
+      out += `Unidade: ${currentUnit}\n`;
+      out += `Período: ${start || "(início)"} até ${end || "(hoje)"}\n`;
+      out += `Tipo: ${tipo}\n\n`;
+
+      if (tipo === "financeiro" || tipo === "completo") {
+        out += `=== FINANCEIRO ===\n`;
+        out += `Receita:  ${money(receita)}\n`;
+        out += `Despesa:  ${money(despesa)}\n`;
+        out += `Saldo operacional: ${money(saldoOp)}\n`;
+        out += `Retiradas: ${money(totalRet)}\n`;
+        out += `Saldo caixa (após retiradas): ${money(saldoCaixa)}\n\n`;
+
+        out += `Lançamentos:\n`;
+        lancs.slice().sort((a,b)=> safeStr(a.data).localeCompare(safeStr(b.data))).forEach(l => {
+          out += `- ${l.data || ""} | ${l.tipo || ""} | ${l.categoria || ""} | ${l.descricao || ""} | ${money(l.valor||0)}\n`;
+        });
+
+        out += `\nRetiradas:\n`;
+        rets.slice().sort((a,b)=> safeStr(a.data).localeCompare(safeStr(b.data))).forEach(r => {
+          out += `- ${r.data || ""} | ${r.nome || ""} | ${money(r.valor||0)}\n`;
+        });
+        out += `\n`;
+      }
+
+      if (tipo === "alunos" || tipo === "completo") {
+        out += `=== ALUNOS ===\n`;
+        out += `Total: ${state.alunos.length}\n`;
+        state.alunos.slice().sort((a,b)=> safeStr(a.nome).localeCompare(safeStr(b.nome))).forEach(a => {
+          out += `- ${a.nome || ""} | Plano: ${a.planoNome || ""} | Tel: ${a.telefone || ""}\n`;
+        });
+        out += `\n`;
+      }
+
+      return out.trim();
+    }
+
+    /****************************************************************
+     * INIT
+     ****************************************************************/
+    window.addEventListener("DOMContentLoaded", () => {
+      initFirebase();
+      // tab default
+      document.querySelector('.tab-btn[data-tab="overview"]')?.classList.add("active");
+      setActiveTab(localStorage.getItem("sgb_tab") || "overview");
+    });
+  </script>
+</body>
+</html>
