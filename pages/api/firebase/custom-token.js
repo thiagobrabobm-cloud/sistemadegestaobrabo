@@ -21,15 +21,12 @@ export default async function handler(req, res) {
 
     if (!allowed.has(email)) return res.status(403).json({ error: "forbidden" });
 
-    // ✅ AQUI é a troca: authAdmin direto (sem admin.auth())
+    // ✅ aqui é a troca: authAdmin (e não admin.auth())
     const token = await authAdmin.createCustomToken(email, { email });
 
     return res.status(200).json({ token });
   } catch (err) {
     console.error("[custom-token] error:", err);
-    return res.status(500).json({
-      error: "internal",
-      message: String(err?.message || err),
-    });
+    return res.status(500).json({ error: "internal_error" });
   }
 }
