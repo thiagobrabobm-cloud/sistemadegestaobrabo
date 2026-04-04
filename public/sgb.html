@@ -14,7 +14,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 
   <style>
-    /* Só pra garantir o “feeling” do app e evitar quebrar layout em telas pequenas */
     .tab-btn.active { background: rgba(255,255,255,0.08); }
     .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
     .mono { font-variant-numeric: tabular-nums; }
@@ -22,38 +21,27 @@
 </head>
 
 <body class="bg-zinc-950 text-zinc-100 min-h-screen">
-  <!-- LOGIN -->
-  <div id="loginView" class="min-h-screen flex items-center justify-center p-4">
+
+  <!-- GATE (carregando / bloqueado) -->
+  <div id="gateView" class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md card rounded-2xl p-6 shadow-lg">
       <div class="flex items-center justify-between">
         <div>
           <div class="text-2xl font-bold">SGB v5.0</div>
-          <div class="text-sm text-zinc-400">Login Google (sem modo visitante)</div>
+          <div class="text-sm text-zinc-400">Carregando…</div>
         </div>
-        <div class="text-xs px-2 py-1 rounded-lg bg-zinc-800/60 border border-zinc-700/60">Firebase</div>
+        <div class="text-xs px-2 py-1 rounded-lg bg-zinc-800/60 border border-zinc-700/60">Secure</div>
       </div>
-
-      <div class="mt-4 text-sm text-zinc-300">
-        Use o botão abaixo para entrar. Apenas e-mails autorizados podem acessar.
+      <div id="gateMsg" class="mt-4 text-sm text-zinc-300">
+        Validando acesso e inicializando banco…
       </div>
-
-      <div id="loginError" class="mt-3 hidden text-sm text-red-300 bg-red-950/40 border border-red-900/40 rounded-xl p-3"></div>
-
-      <div class="mt-4 flex gap-2">
-        <button id="btnLoginGoogle" class="w-full px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
-          Entrar com Google
-        </button>
-      </div>
-
-      <div class="mt-4 text-xs text-zinc-500">
-        Dica: se o login falhar no Vercel, confira <b>Authorized domains</b> no Firebase Auth.
-      </div>
+      <div id="gateErr" class="mt-3 hidden text-sm text-red-300 bg-red-950/40 border border-red-900/40 rounded-xl p-3"></div>
     </div>
   </div>
 
   <!-- APP -->
   <div id="appView" class="hidden min-h-screen">
-    <!-- TOPBAR -->
+    <!-- TOPBAR (sem “Logado como” e sem botão Sair — fica só no topo do Next) -->
     <div class="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
       <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center sm:justify-between">
         <div class="flex items-center gap-3">
@@ -61,20 +49,9 @@
           <div class="text-xs px-2 py-1 rounded-lg bg-zinc-800/60 border border-zinc-700/60">v5.0</div>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
-          <div class="text-xs text-zinc-300">
-            Logado como: <span id="userEmail" class="font-semibold"></span>
-          </div>
-
-          <div class="flex gap-2 items-center">
-            <label class="text-xs text-zinc-400">Unidade</label>
-            <select id="unitSelect" class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm">
-            </select>
-
-            <button id="btnLogout" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm">
-              Sair
-            </button>
-          </div>
+        <div class="flex gap-2 items-center">
+          <label class="text-xs text-zinc-400">Unidade</label>
+          <select id="unitSelect" class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm"></select>
         </div>
       </div>
 
@@ -110,7 +87,6 @@
           </div>
         </div>
 
-        <!-- KPI CARDS -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
           <div class="card rounded-2xl p-4">
             <div class="text-sm text-zinc-400">Receita (mês)</div>
@@ -121,27 +97,22 @@
             <div id="kpiDespesa" class="mono text-3xl font-bold text-red-400">R$ 0,00</div>
           </div>
           <div class="card rounded-2xl p-4">
-            <div class="text-sm text-zinc-400">Saldo líquido</div>
+            <div class="text-sm text-zinc-400">Saldo líquido (op.)</div>
             <div id="kpiSaldo" class="mono text-3xl font-bold text-white">R$ 0,00</div>
             <div id="kpiSaldoHint" class="text-xs text-zinc-500 mt-1 hidden">Negativo (−)</div>
+            <div id="kpiCaixaInfo" class="text-xs text-zinc-400 mt-2"></div>
           </div>
         </div>
 
-        <!-- FLUXO FINANCEIRO -->
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-3 mt-4">
           <div class="card rounded-2xl p-4">
-            <div class="flex items-center justify-between gap-2">
-              <div>
-                <div class="font-semibold">Fluxo financeiro</div>
-                <div class="text-sm text-zinc-400">Receita vs Despesa por dia (no mês)</div>
-              </div>
-            </div>
+            <div class="font-semibold">Fluxo financeiro</div>
+            <div class="text-sm text-zinc-400">Receita vs Despesa por dia (no mês)</div>
             <div class="mt-3">
               <canvas id="chartFluxo" height="140"></canvas>
             </div>
           </div>
 
-          <!-- TOP 5 DESPESAS -->
           <div class="card rounded-2xl p-4">
             <div class="font-semibold">Top 5 Despesas (mês)</div>
             <div class="text-sm text-zinc-400">Pizza + legenda lateral</div>
@@ -154,7 +125,6 @@
           </div>
         </div>
 
-        <!-- TOP 5 RECEITAS -->
         <div class="card rounded-2xl p-4 mt-3">
           <div class="font-semibold">Top 5 Receitas (mês)</div>
           <div class="text-sm text-zinc-400">Pizza + legenda lateral</div>
@@ -176,9 +146,7 @@
           </div>
           <div class="flex gap-2 items-center">
             <input id="alunosSearch" placeholder="Buscar por nome..." class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm w-64" />
-            <button id="btnNovoAluno" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
-              Novo Aluno
-            </button>
+            <button id="btnNovoAluno" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">Novo Aluno</button>
           </div>
         </div>
 
@@ -200,6 +168,8 @@
                   <th class="text-left py-2 pr-2">Nome</th>
                   <th class="text-left py-2 pr-2">Plano</th>
                   <th class="text-left py-2 pr-2">Telefone</th>
+                  <th class="text-left py-2 pr-2">Criado por</th>
+                  <th class="text-left py-2 pr-2">Criado em</th>
                   <th class="text-left py-2 pr-2">Ações</th>
                 </tr>
               </thead>
@@ -218,9 +188,7 @@
           </div>
           <div class="flex gap-2 items-center">
             <input id="funcSearch" placeholder="Buscar por nome..." class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm w-64" />
-            <button id="btnNovoFunc" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
-              Novo Funcionário
-            </button>
+            <button id="btnNovoFunc" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">Novo Funcionário</button>
           </div>
         </div>
 
@@ -242,6 +210,8 @@
                   <th class="text-left py-2 pr-2">Nome</th>
                   <th class="text-left py-2 pr-2">Cargo</th>
                   <th class="text-left py-2 pr-2">Salário</th>
+                  <th class="text-left py-2 pr-2">Criado por</th>
+                  <th class="text-left py-2 pr-2">Criado em</th>
                   <th class="text-left py-2 pr-2">Ações</th>
                 </tr>
               </thead>
@@ -260,9 +230,7 @@
           </div>
           <div class="flex gap-2 items-center">
             <input id="prestSearch" placeholder="Buscar por nome..." class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm w-64" />
-            <button id="btnNovoPrest" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
-              Novo Prestador
-            </button>
+            <button id="btnNovoPrest" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">Novo Prestador</button>
           </div>
         </div>
 
@@ -284,6 +252,8 @@
                   <th class="text-left py-2 pr-2">Nome</th>
                   <th class="text-left py-2 pr-2">Tipo</th>
                   <th class="text-left py-2 pr-2">Contato</th>
+                  <th class="text-left py-2 pr-2">Criado por</th>
+                  <th class="text-left py-2 pr-2">Criado em</th>
                   <th class="text-left py-2 pr-2">Ações</th>
                 </tr>
               </thead>
@@ -301,9 +271,7 @@
             <div class="text-sm text-zinc-400">Cadastro básico</div>
           </div>
           <div class="flex gap-2 items-center">
-            <button id="btnNovoPlano" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
-              Novo Plano
-            </button>
+            <button id="btnNovoPlano" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">Novo Plano</button>
           </div>
         </div>
 
@@ -316,6 +284,8 @@
                   <th class="text-left py-2 pr-2">Nome</th>
                   <th class="text-left py-2 pr-2">Valor</th>
                   <th class="text-left py-2 pr-2">Ativo</th>
+                  <th class="text-left py-2 pr-2">Criado por</th>
+                  <th class="text-left py-2 pr-2">Criado em</th>
                   <th class="text-left py-2 pr-2">Ações</th>
                 </tr>
               </thead>
@@ -336,9 +306,7 @@
           <div class="flex flex-wrap gap-2 items-center">
             <label class="text-sm text-zinc-300">Mês</label>
             <input id="lancMonth" type="month" class="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" />
-            <button id="btnNovoLanc" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
-              Novo Lançamento
-            </button>
+            <button id="btnNovoLanc" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">Novo Lançamento</button>
           </div>
         </div>
 
@@ -353,7 +321,10 @@
                   <th class="text-left py-2 pr-2">Categoria</th>
                   <th class="text-left py-2 pr-2">Descrição</th>
                   <th class="text-left py-2 pr-2">Valor</th>
-                  <th class="text-left py-2 pr-2">Documento</th>
+                  <th class="text-left py-2 pr-2">Vínculo</th>
+                  <th class="text-left py-2 pr-2">Doc</th>
+                  <th class="text-left py-2 pr-2">Criado por</th>
+                  <th class="text-left py-2 pr-2">Criado em</th>
                   <th class="text-left py-2 pr-2">Ações</th>
                 </tr>
               </thead>
@@ -371,9 +342,7 @@
             <div class="text-sm text-zinc-400">Reduz saldo/caixa (sem virar despesa operacional)</div>
           </div>
           <div class="flex gap-2 items-center">
-            <button id="btnNovaRetirada" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">
-              Nova Retirada
-            </button>
+            <button id="btnNovaRetirada" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition">Nova Retirada</button>
           </div>
         </div>
 
@@ -386,6 +355,8 @@
                   <th class="text-left py-2 pr-2">Data</th>
                   <th class="text-left py-2 pr-2">Nome</th>
                   <th class="text-left py-2 pr-2">Valor</th>
+                  <th class="text-left py-2 pr-2">Criado por</th>
+                  <th class="text-left py-2 pr-2">Criado em</th>
                   <th class="text-left py-2 pr-2">Ações</th>
                 </tr>
               </thead>
@@ -419,7 +390,7 @@
         </div>
 
         <div class="card rounded-2xl p-4 mt-4">
-          <div class="text-sm text-zinc-400">Prévia</div>
+          <div class="text-sm text-zinc-400">Prévia (texto)</div>
           <div id="repPreview" class="mt-3 text-sm text-zinc-200 whitespace-pre-wrap"></div>
         </div>
       </section>
@@ -443,36 +414,40 @@
 
   <script>
     /****************************************************************
-     * CONFIG (PREENCHA)
+     * CONFIG
      ****************************************************************/
     const firebaseConfig = {
-      // >>> PREENCHA COM SEUS DADOS DO FIREBASE (Project settings -> Web app)
-      apiKey: "SUA_API_KEY",
-      authDomain: "SEU_AUTH_DOMAIN",
-      projectId: "SEU_PROJECT_ID",
-      storageBucket: "SEU_STORAGE_BUCKET",
-      messagingSenderId: "SEU_SENDER_ID",
-      appId: "SEU_APP_ID"
+      apiKey: "AIZaSyBEId876arIljEKYUz7ejnhLcstnsHY7Y",
+      authDomain: "sistemadegestaobrabo.firebaseapp.com",
+      projectId: "sistemadegestaobrabo",
+      storageBucket: "sistemadegestaobrabo.firebasestorage.app",
+      messagingSenderId: "1050063988219",
+      appId: "1:1050063988219:web:d5a4b3d13051448406575e",
     };
 
-    // E-mails permitidos (bater com as Rules)
+    // Checagem extra (mesmo já tendo whitelist no NextAuth)
     const allowedEmails = [
       "thiagobrabobm@gmail.com",
-      "marlucezanco02@gmail.com"
+      "marlucezanco02@gmail.com",
     ].map(e => e.toLowerCase());
 
-    // Unidades (simples e editável)
     const DEFAULT_UNIDADES = ["Matriz"];
+
+    // Categorias sugeridas (ainda permite digitar livre)
+    const CATEG_RECEITA = ["Mensalidade", "Gympass", "TotalPass", "Avaliação", "Produtos", "Matrícula", "Outros"];
+    const CATEG_DESPESA = ["Folha", "Aluguel", "Água", "Luz", "Internet", "Manutenção", "Produtos/Limpeza", "Impostos", "Outros"];
 
     /****************************************************************
      * ESTADO
      ****************************************************************/
+    const $ = (id) => document.getElementById(id);
+
     let auth, db;
-    let currentUser = null;
+    let currentUser = null;     // email (do NextAuth/query)
     let currentUnit = null;
     let started = false;
-
     let unsubscribers = [];
+
     const state = {
       planos: [],
       alunos: [],
@@ -482,38 +457,24 @@
       retiradas: []
     };
 
-    // paginações
     const pag = {
       alunos: { page: 1, perPage: 50 },
       func: { page: 1, perPage: 50 },
       prest: { page: 1, perPage: 50 }
     };
 
-    // charts
     let chartFluxo = null;
     let chartTopDespesas = null;
     let chartTopReceitas = null;
 
     /****************************************************************
-     * HELPERS UI
+     * HELPERS
      ****************************************************************/
-    const $ = (id) => document.getElementById(id);
-
     function money(n) {
       const v = Number(n || 0);
       return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     }
-
-    function safeStr(s) {
-      return (s ?? "").toString();
-    }
-
-    function ymFromDateInput(value) {
-      // "YYYY-MM" -> { y, m }
-      if (!value || !/^\d{4}-\d{2}$/.test(value)) return null;
-      const [y, m] = value.split("-").map(Number);
-      return { y, m };
-    }
+    function safeStr(s) { return (s ?? "").toString(); }
 
     function toISODate(d) {
       const yyyy = d.getFullYear();
@@ -521,32 +482,44 @@
       const dd = String(d.getDate()).padStart(2,"0");
       return `${yyyy}-${mm}-${dd}`;
     }
+    function fmtDateTime(iso) {
+      if (!iso) return "-";
+      const dt = new Date(iso);
+      if (Number.isNaN(dt.getTime())) return "-";
+      return dt.toLocaleString("pt-BR");
+    }
 
+    function ymFromDateInput(value) {
+      if (!value || !/^\d{4}-\d{2}$/.test(value)) return null;
+      const [y, m] = value.split("-").map(Number);
+      return { y, m };
+    }
     function firstDayOfMonth(y, m) { return new Date(y, m-1, 1, 0,0,0,0); }
     function lastDayOfMonth(y, m)  { return new Date(y, m, 0, 23,59,59,999); }
     function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); }
 
     function btnClass(kind="dark") {
-      // Mantém layout “padrão” em tudo (mesma altura, radius, borda)
       if (kind === "primary") return "px-4 py-2 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white transition";
       if (kind === "danger")  return "px-3 py-2 rounded-xl bg-red-950/40 border border-red-900/50 text-red-200 hover:bg-red-950/60 transition text-sm";
       return "px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition text-sm";
     }
 
-    function showLoginError(msg) {
-      const el = $("loginError");
-      if (!msg) { el.classList.add("hidden"); el.textContent = ""; return; }
-      el.textContent = msg;
-      el.classList.remove("hidden");
-    }
-
-    function showLogin() {
-      $("loginView").classList.remove("hidden");
+    function showGate(msg, err=null) {
+      $("gateMsg").textContent = msg || "";
+      const e = $("gateErr");
+      if (err) {
+        e.textContent = err;
+        e.classList.remove("hidden");
+      } else {
+        e.textContent = "";
+        e.classList.add("hidden");
+      }
+      $("gateView").classList.remove("hidden");
       $("appView").classList.add("hidden");
     }
 
     function showApp() {
-      $("loginView").classList.add("hidden");
+      $("gateView").classList.add("hidden");
       $("appView").classList.remove("hidden");
     }
 
@@ -562,7 +535,6 @@
 
       localStorage.setItem("sgb_tab", tabKey);
 
-      // atualizações específicas por tela
       if (tabKey === "overview") renderOverview();
       if (tabKey === "alunos") renderAlunos();
       if (tabKey === "funcionarios") renderFuncionarios();
@@ -579,20 +551,22 @@
       $("modalBody").innerHTML = bodyHtml;
       $("modalBackdrop").classList.remove("hidden");
     }
-
     function closeModal() {
       $("modalBackdrop").classList.add("hidden");
       $("modalBody").innerHTML = "";
     }
-
     $("modalClose").addEventListener("click", closeModal);
-    $("modalBackdrop").addEventListener("click", (e) => {
-      if (e.target === $("modalBackdrop")) closeModal();
-    });
+    $("modalBackdrop").addEventListener("click", (e) => { if (e.target === $("modalBackdrop")) closeModal(); });
 
     /****************************************************************
-     * IMAGENS (3x4)
+     * IMAGEM 3x4 (com limite)
      ****************************************************************/
+    function dataUrlSizeKB(dataUrl) {
+      if (!dataUrl) return 0;
+      const base64 = (dataUrl.split(",")[1] || "");
+      return Math.ceil((base64.length * 3) / 4 / 1024);
+    }
+
     async function fileToDataUrl(file) {
       return new Promise((resolve, reject) => {
         const r = new FileReader();
@@ -611,8 +585,7 @@
       });
     }
 
-    async function cropResizeTo3x4(file, outW=300, outH=400, quality=0.85) {
-      // Center-crop para razão 3:4 e reduz tamanho (JPEG)
+    async function cropResizeTo3x4Smart(file, outW, outH, maxKB, startQ=0.85, minQ=0.55) {
       const dataUrl = await fileToDataUrl(file);
       const img = await loadImage(dataUrl);
 
@@ -622,12 +595,10 @@
       let sx=0, sy=0, sw=img.width, sh=img.height;
 
       if (srcRatio > targetRatio) {
-        // imagem mais “larga” -> corta laterais
         sh = img.height;
         sw = sh * targetRatio;
         sx = (img.width - sw) / 2;
       } else {
-        // imagem mais “alta” -> corta topo/baixo
         sw = img.width;
         sh = sw / targetRatio;
         sy = (img.height - sh) / 2;
@@ -641,101 +612,100 @@
       ctx.fillRect(0,0,outW,outH);
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
 
-      return canvas.toDataURL("image/jpeg", quality);
-    }
-
-    /****************************************************************
-     * FIREBASE
-     ****************************************************************/
-    function initFirebase() {
-      try {
-        if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
-        auth = firebase.auth();
-        db = firebase.firestore();
-        db.settings({ ignoreUndefinedProperties: true });
-
-        auth.onAuthStateChanged(async (user) => {
-          if (!user) {
-            currentUser = null;
-            started = false;
-            showLogin();
-            return;
-          }
-
-          const email = (user.email || "").toLowerCase();
-
-          if (!email || !allowedEmails.includes(email)) {
-            await auth.signOut();
-            currentUser = null;
-            started = false;
-            showLogin();
-            showLoginError("Acesso negado: e-mail não autorizado.");
-            return;
-          }
-
-          currentUser = email;
-          $("userEmail").textContent = currentUser;
-
-          showApp();
-          startAfterLogin();
-        });
-
-      } catch (e) {
-        console.error("[SGB] Firebase init error:", e);
-        showLogin();
-        showLoginError("Erro ao inicializar Firebase. Verifique o console.");
+      // tenta reduzir qualidade até caber no limite
+      for (let q = startQ; q >= minQ; q -= 0.05) {
+        const out = canvas.toDataURL("image/jpeg", q);
+        if (dataUrlSizeKB(out) <= maxKB) return out;
       }
+      // se não couber, volta no menor q
+      return canvas.toDataURL("image/jpeg", minQ);
     }
 
-    async function loginWithGoogle() {
-      try {
-        showLoginError("");
-        const provider = new firebase.auth.GoogleAuthProvider();
-        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        await auth.signInWithPopup(provider);
-      } catch (e) {
-        console.error("[SGB] login error:", e);
+    function setupImagePicker({
+      previewId,
+      btnCamId,
+      btnFileId,
+      btnRemoveId,
+      inputCamId,
+      inputFileId,
+      initialValue,
+      outW,
+      outH,
+      maxKB
+    }) {
+      let value = initialValue || "";
 
-        if (e.code === "auth/unauthorized-domain") {
-          showLoginError("Domínio não autorizado. Adicione seu domínio do Vercel em Authorized domains no Firebase Auth.");
+      function setPreview() {
+        const prev = $(previewId);
+        if (!prev) return;
+        if (!value) {
+          prev.outerHTML = `<div id="${previewId}" class="text-xs text-zinc-500">Sem imagem</div>`;
           return;
         }
-
-        if (e.code === "auth/popup-blocked" || e.code === "auth/cancelled-popup-request") {
-          // fallback redirect
-          try {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            await auth.signInWithRedirect(provider);
-            return;
-          } catch (err) {
-            console.error("[SGB] redirect login error:", err);
-          }
-        }
-
-        showLoginError("Falha no login. Veja o console para detalhes.");
+        if (prev.tagName?.toLowerCase() === "img") prev.src = value;
+        else prev.outerHTML = `<img id="${previewId}" src="${value}" class="w-full h-full object-cover" />`;
       }
+
+      $(btnCamId).addEventListener("click", () => $(inputCamId).click());
+      $(btnFileId).addEventListener("click", () => $(inputFileId).click());
+      $(btnRemoveId).addEventListener("click", () => { value = ""; setPreview(); });
+
+      async function handleFile(input) {
+        const f = input.files?.[0];
+        if (!f) return;
+        value = await cropResizeTo3x4Smart(f, outW, outH, maxKB);
+        setPreview();
+        input.value = "";
+      }
+
+      $(inputCamId).addEventListener("change", (e) => handleFile(e.target));
+      $(inputFileId).addEventListener("change", (e) => handleFile(e.target));
+
+      return { get: () => value };
     }
 
-    function logout() {
-      unsubscribers.forEach(u => { try { u && u(); } catch {} });
-      unsubscribers = [];
-
-      state.planos = [];
-      state.alunos = [];
-      state.funcionarios = [];
-      state.prestadores = [];
-      state.lancamentos = [];
-      state.retiradas = [];
-
-      started = false;
-      currentUser = null;
-
-      try { auth?.signOut?.(); } catch {}
-      showLogin();
+    function tinyPhotoCell(dataUrl) {
+      if (!dataUrl) return `<div class="w-[42px] h-[56px] rounded-lg bg-zinc-900 border border-zinc-800"></div>`;
+      return `<img src="${dataUrl}" class="w-[42px] h-[56px] object-cover rounded-lg border border-zinc-800" />`;
     }
 
     /****************************************************************
-     * START + UNIDADE + LISTENERS
+     * FIREBASE + CUSTOM TOKEN (SEM POPUP)
+     ****************************************************************/
+    function initFirebase() {
+      if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
+      auth = firebase.auth();
+      db = firebase.firestore();
+      db.settings({ ignoreUndefinedProperties: true });
+    }
+
+    async function ensureFirebaseSession() {
+      // Pega token do servidor (NextAuth) e loga no Firebase sem popup.
+      const u = auth.currentUser;
+      const uEmail = (u?.email || "").toLowerCase();
+
+      if (u && uEmail === currentUser) return;
+
+      showGate("Autenticando no Firebase…");
+      const res = await fetch("/api/firebase/custom-token", { method: "GET" });
+      if (!res.ok) {
+        const t = await res.text().catch(()=> "");
+        throw new Error(`Falha ao obter token (${res.status}). ${t}`);
+      }
+      const { token } = await res.json();
+      if (!token) throw new Error("Token vazio.");
+      await auth.signInWithCustomToken(token);
+    }
+
+    function getUserEmailFromQuery() {
+      const p = new URLSearchParams(location.search);
+      const raw = p.get("userEmail") || "";
+      try { return decodeURIComponent(raw).trim().toLowerCase(); }
+      catch { return raw.trim().toLowerCase(); }
+    }
+
+    /****************************************************************
+     * UNIDADE + LISTENERS
      ****************************************************************/
     function loadUnits() {
       const saved = JSON.parse(localStorage.getItem("sgb_units") || "null");
@@ -750,22 +720,23 @@
       currentUnit = pick;
     }
 
+    function cleanupListeners() {
+      unsubscribers.forEach(u => { try { u && u(); } catch {} });
+      unsubscribers = [];
+    }
+
     function setUnit(u) {
       currentUnit = u;
       localStorage.setItem("sgb_unit", currentUnit);
 
-      // reseta listeners
-      unsubscribers.forEach(u => { try { u && u(); } catch {} });
-      unsubscribers = [];
+      cleanupListeners();
 
-      // listeners por unidade
       const base = db.collection("unidades").doc(currentUnit);
 
       unsubscribers.push(
         base.collection("planos").orderBy("nome").onSnapshot(snap => {
           state.planos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           renderPlanos();
-          refreshSelectsPlanos();
           renderAlunos();
         })
       );
@@ -774,7 +745,6 @@
         base.collection("alunos").orderBy("nome").onSnapshot(snap => {
           state.alunos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           renderAlunos();
-          refreshSelectsAlunos();
           renderLancamentos();
           renderRelatoriosPreview();
         })
@@ -784,7 +754,6 @@
         base.collection("funcionarios").orderBy("nome").onSnapshot(snap => {
           state.funcionarios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           renderFuncionarios();
-          refreshSelectsFuncionarios();
           renderLancamentos();
           renderRelatoriosPreview();
         })
@@ -794,7 +763,6 @@
         base.collection("prestadores").orderBy("nome").onSnapshot(snap => {
           state.prestadores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           renderPrestadores();
-          refreshSelectsPrestadores();
           renderLancamentos();
           renderRelatoriosPreview();
         })
@@ -817,52 +785,11 @@
         })
       );
 
-      // atualiza telas
       renderOverview();
     }
 
-    function startAfterLogin() {
-      if (started) return;
-      started = true;
-
-      loadUnits();
-      setUnit(currentUnit);
-
-      // Tab inicial
-      const tab = localStorage.getItem("sgb_tab") || "overview";
-      setActiveTab(tab);
-
-      // Datas padrão
-      const now = new Date();
-      const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
-      $("overviewMonth").value = month;
-      $("lancMonth").value = month;
-
-      $("repEnd").value = toISODate(now);
-      const start = new Date(now);
-      start.setDate(1);
-      $("repStart").value = toISODate(start);
-    }
-
     /****************************************************************
-     * EVENTS GERAIS
-     ****************************************************************/
-    $("btnLoginGoogle").addEventListener("click", loginWithGoogle);
-    $("btnLogout").addEventListener("click", logout);
-
-    $("unitSelect").addEventListener("change", (e) => {
-      setUnit(e.target.value);
-    });
-
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-      btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
-    });
-
-    $("overviewMonth").addEventListener("change", renderOverview);
-    $("lancMonth").addEventListener("change", renderLancamentos);
-
-    /****************************************************************
-     * OVERVIEW (KPIs + CHARTS)
+     * OVERVIEW
      ****************************************************************/
     function getLancamentosDoMes(ym) {
       if (!ym) return [];
@@ -871,12 +798,27 @@
       const fim = lastDayOfMonth(y, m).getTime();
 
       return state.lancamentos.filter(l => {
-        const t = new Date(l.data || l.createdAt || l.created_at || l.dt || l.date || 0).getTime();
-        // Preferir campo data ISO (YYYY-MM-DD)
         if (l.data && /^\d{4}-\d{2}-\d{2}$/.test(l.data)) {
           const tt = new Date(l.data + "T00:00:00").getTime();
           return tt >= ini && tt <= fim;
         }
+        const t = new Date(l.createdAt || 0).getTime();
+        return t >= ini && t <= fim;
+      });
+    }
+
+    function getRetiradasDoMes(ym) {
+      if (!ym) return [];
+      const { y, m } = ym;
+      const ini = firstDayOfMonth(y, m).getTime();
+      const fim = lastDayOfMonth(y, m).getTime();
+
+      return state.retiradas.filter(r => {
+        if (r.data && /^\d{4}-\d{2}-\d{2}$/.test(r.data)) {
+          const tt = new Date(r.data + "T00:00:00").getTime();
+          return tt >= ini && tt <= fim;
+        }
+        const t = new Date(r.createdAt || 0).getTime();
         return t >= ini && t <= fim;
       });
     }
@@ -907,7 +849,6 @@
         el.innerHTML = `<div class="text-sm text-zinc-400">Sem dados no período.</div>`;
         return;
       }
-
       items.forEach((it, idx) => {
         const c = colors[idx % colors.length];
         const row = document.createElement("div");
@@ -926,6 +867,7 @@
     function renderOverview() {
       const ym = ymFromDateInput($("overviewMonth").value);
       const lancs = getLancamentosDoMes(ym);
+      const rets = getRetiradasDoMes(ym);
 
       const receita = sumByTipo(lancs, "RECEITA");
       const despesa = sumByTipo(lancs, "DESPESA");
@@ -942,7 +884,10 @@
         $("kpiSaldoHint").classList.add("hidden");
       }
 
-      // Fluxo (por dia)
+      const totalRet = rets.reduce((a,x)=>a+Number(x.valor||0),0);
+      const caixa = saldo - totalRet;
+      $("kpiCaixaInfo").textContent = `Caixa após retiradas (mês): ${money(caixa)}`;
+
       if (!ym) return;
       const { y, m } = ym;
       const dcount = daysInMonth(y,m);
@@ -952,12 +897,7 @@
 
       lancs.forEach(l => {
         let day = 0;
-        if (l.data && /^\d{4}-\d{2}-\d{2}$/.test(l.data)) {
-          day = Number(l.data.split("-")[2]);
-        } else {
-          const dt = new Date(l.data || l.createdAt || l.dt || 0);
-          day = dt.getDate();
-        }
+        if (l.data && /^\d{4}-\d{2}-\d{2}$/.test(l.data)) day = Number(l.data.split("-")[2]);
         if (!day || day < 1 || day > dcount) return;
         const idx = day-1;
         const tipo = (l.tipo||"").toUpperCase();
@@ -966,7 +906,6 @@
         if (tipo === "DESPESA") despesaDia[idx] += val;
       });
 
-      // chart fluxo
       const ctx = $("chartFluxo").getContext("2d");
       if (chartFluxo) chartFluxo.destroy();
       chartFluxo = new Chart(ctx, {
@@ -974,28 +913,14 @@
         data: {
           labels,
           datasets: [
-            {
-              label: "Receita",
-              data: receitaDia,
-              backgroundColor: "rgba(34,197,94,0.45)",
-              borderColor: "rgba(34,197,94,1)",
-              borderWidth: 1
-            },
-            {
-              label: "Despesa",
-              data: despesaDia,
-              backgroundColor: "rgba(239,68,68,0.45)",
-              borderColor: "rgba(239,68,68,1)",
-              borderWidth: 1
-            }
+            { label: "Receita", data: receitaDia, backgroundColor: "rgba(34,197,94,0.45)", borderColor: "rgba(34,197,94,1)", borderWidth: 1 },
+            { label: "Despesa", data: despesaDia, backgroundColor: "rgba(239,68,68,0.45)", borderColor: "rgba(239,68,68,1)", borderWidth: 1 }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: { labels: { color: "#e4e4e7" } }
-          },
+          plugins: { legend: { labels: { color: "#e4e4e7" } } },
           scales: {
             x: { ticks: { color: "#a1a1aa" }, grid: { color: "rgba(255,255,255,0.06)" } },
             y: { ticks: { color: "#a1a1aa" }, grid: { color: "rgba(255,255,255,0.06)" } }
@@ -1003,58 +928,31 @@
         }
       });
 
-      // Top 5 Despesas (pizza)
       const topD = groupTop5ByCategoria(lancs, "DESPESA");
       const topR = groupTop5ByCategoria(lancs, "RECEITA");
-      const pieColors = ["#60a5fa", "#a78bfa", "#f472b6", "#fbbf24", "#34d399"]; // 5 cores
+      const pieColors = ["#60a5fa", "#a78bfa", "#f472b6", "#fbbf24", "#34d399"];
 
-      // despesas pie
       const ctxD = $("chartTopDespesas").getContext("2d");
       if (chartTopDespesas) chartTopDespesas.destroy();
       chartTopDespesas = new Chart(ctxD, {
         type: "pie",
-        data: {
-          labels: topD.map(x => x.label),
-          datasets: [{
-            data: topD.map(x => x.value),
-            backgroundColor: topD.map((_,i)=> pieColors[i%pieColors.length]),
-            borderColor: "rgba(0,0,0,0.25)",
-            borderWidth: 1
-          }]
-        },
-        options: {
-          plugins: {
-            legend: { display: false }
-          }
-        }
+        data: { labels: topD.map(x => x.label), datasets: [{ data: topD.map(x => x.value), backgroundColor: topD.map((_,i)=> pieColors[i%pieColors.length]), borderColor: "rgba(0,0,0,0.25)", borderWidth: 1 }] },
+        options: { plugins: { legend: { display: false } } }
       });
       renderLegend("legendTopDespesas", topD, pieColors);
 
-      // receitas pie
       const ctxR = $("chartTopReceitas").getContext("2d");
       if (chartTopReceitas) chartTopReceitas.destroy();
       chartTopReceitas = new Chart(ctxR, {
         type: "pie",
-        data: {
-          labels: topR.map(x => x.label),
-          datasets: [{
-            data: topR.map(x => x.value),
-            backgroundColor: topR.map((_,i)=> pieColors[i%pieColors.length]),
-            borderColor: "rgba(0,0,0,0.25)",
-            borderWidth: 1
-          }]
-        },
-        options: {
-          plugins: {
-            legend: { display: false }
-          }
-        }
+        data: { labels: topR.map(x => x.label), datasets: [{ data: topR.map(x => x.value), backgroundColor: topR.map((_,i)=> pieColors[i%pieColors.length]), borderColor: "rgba(0,0,0,0.25)", borderWidth: 1 }] },
+        options: { plugins: { legend: { display: false } } }
       });
       renderLegend("legendTopReceitas", topR, pieColors);
     }
 
     /****************************************************************
-     * LISTAS COM BUSCA + PAGINAÇÃO (50)
+     * LISTA: busca + paginação
      ****************************************************************/
     function filterByName(arr, q) {
       const s = safeStr(q).trim().toLowerCase();
@@ -1070,16 +968,8 @@
       return { items: arr.slice(start, start + perPage), page: p, pages, total };
     }
 
-    function tinyPhotoCell(dataUrl) {
-      const src = dataUrl || "";
-      if (!src) {
-        return `<div class="w-[42px] h-[56px] rounded-lg bg-zinc-900 border border-zinc-800"></div>`;
-      }
-      return `<img src="${src}" class="w-[42px] h-[56px] object-cover rounded-lg border border-zinc-800" />`;
-    }
-
     /****************************************************************
-     * ALUNOS
+     * ALUNOS (gera mensalidade automática ao criar se tiver plano)
      ****************************************************************/
     $("alunosSearch").addEventListener("input", () => { pag.alunos.page = 1; renderAlunos(); });
     $("alunosPrev").addEventListener("click", () => { pag.alunos.page--; renderAlunos(); });
@@ -1105,6 +995,8 @@
           <td class="py-2 pr-2 font-semibold">${safeStr(a.nome)}</td>
           <td class="py-2 pr-2 text-zinc-300">${safeStr(a.planoNome || "")}</td>
           <td class="py-2 pr-2 text-zinc-300">${safeStr(a.telefone || "")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(a.createdBy || "-")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${fmtDateTime(a.createdAt)}</td>
           <td class="py-2 pr-2">
             <div class="flex gap-2">
               <button class="${btnClass("dark")}" data-act="edit">Editar</button>
@@ -1124,17 +1016,9 @@
       await ref.delete();
     }
 
-    function refreshSelectsPlanos() {
-      // usado em modal aluno
-    }
-
-    function refreshSelectsAlunos() {
-      // usado em modal lançamento
-    }
-
     function openAlunoModal(aluno) {
       const isEdit = !!aluno;
-      const planoOptions = state.planos.map(p => `<option value="${p.id}">${safeStr(p.nome)}</option>`).join("");
+      const planoOptions = state.planos.map(p => `<option value="${p.id}">${safeStr(p.nome)} (${money(p.valor||0)})</option>`).join("");
       const foto = aluno?.fotoDataUrl || "";
 
       const body = `
@@ -1156,7 +1040,9 @@
                 <option value="">(Sem plano)</option>
                 ${planoOptions}
               </select>
-              <div class="text-xs text-zinc-500 mt-1">Se escolher plano, você pode gerar mensalidade automática no futuro.</div>
+              <div class="text-xs text-zinc-500 mt-1">
+                Ao CRIAR aluno com plano, o sistema gera automaticamente um lançamento de <b>RECEITA</b> (Mensalidade).
+              </div>
             </div>
           </div>
 
@@ -1165,7 +1051,7 @@
 
             <div class="flex gap-3 items-start">
               <div class="w-[84px] h-[112px] rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center">
-                ${foto ? `<img id="mAlunoFotoPreview" src="${foto}" class="w-full h-full object-cover" />` : `<div id="mAlunoFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`}
+                ${foto ? `<img id="mAlunoFotoPreview" src="${foto}" class="w-full h-full object-cover" />` : `<div id="mAlunoFotoPreview" class="text-xs text-zinc-500">Sem imagem</div>`}
               </div>
 
               <div class="flex flex-col gap-2">
@@ -1190,37 +1076,19 @@
         bodyHtml: body
       });
 
-      // set plano selecionado
       const sel = $("mAlunoPlano");
-      const planoId = aluno?.planoId || "";
-      if (sel) sel.value = planoId;
+      sel.value = aluno?.planoId || "";
 
-      // handlers foto
-      let fotoDataUrl = aluno?.fotoDataUrl || "";
-
-      $("mAlunoFotoTirar").addEventListener("click", () => $("mAlunoFotoInputCam").click());
-      $("mAlunoFotoAnexar").addEventListener("click", () => $("mAlunoFotoInputFile").click());
-      $("mAlunoFotoRemover").addEventListener("click", () => {
-        fotoDataUrl = "";
-        const box = $("mAlunoFotoPreview");
-        box.outerHTML = `<div id="mAlunoFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`;
+      const fotoPicker = setupImagePicker({
+        previewId: "mAlunoFotoPreview",
+        btnCamId: "mAlunoFotoTirar",
+        btnFileId: "mAlunoFotoAnexar",
+        btnRemoveId: "mAlunoFotoRemover",
+        inputCamId: "mAlunoFotoInputCam",
+        inputFileId: "mAlunoFotoInputFile",
+        initialValue: aluno?.fotoDataUrl || "",
+        outW: 300, outH: 400, maxKB: 450
       });
-
-      async function handleFile(input) {
-        const f = input.files?.[0];
-        if (!f) return;
-        fotoDataUrl = await cropResizeTo3x4(f, 300, 400, 0.85);
-        const prev = $("mAlunoFotoPreview");
-        if (prev.tagName?.toLowerCase() === "img") {
-          prev.src = fotoDataUrl;
-        } else {
-          prev.outerHTML = `<img id="mAlunoFotoPreview" src="${fotoDataUrl}" class="w-full h-full object-cover" />`;
-        }
-        input.value = "";
-      }
-
-      $("mAlunoFotoInputCam").addEventListener("change", (e) => handleFile(e.target));
-      $("mAlunoFotoInputFile").addEventListener("change", (e) => handleFile(e.target));
 
       $("mAlunoSalvar").addEventListener("click", async () => {
         const nome = safeStr($("mAlunoNome").value).trim();
@@ -1230,24 +1098,58 @@
         const planoIdSel = safeStr($("mAlunoPlano").value);
         const plano = state.planos.find(p => p.id === planoIdSel);
 
+        const base = db.collection("unidades").doc(currentUnit);
+        const colAlunos = base.collection("alunos");
+        const colLanc = base.collection("lancamentos");
+
+        const nowIso = new Date().toISOString();
         const payload = {
           nome,
           telefone,
           planoId: planoIdSel || "",
           planoNome: plano ? safeStr(plano.nome) : "",
-          fotoDataUrl: fotoDataUrl || "",
-          updatedAt: new Date().toISOString(),
+          fotoDataUrl: fotoPicker.get() || "",
+          updatedAt: nowIso,
           updatedBy: currentUser,
           schemaVersion: "5.0"
         };
 
-        const col = db.collection("unidades").doc(currentUnit).collection("alunos");
         if (isEdit) {
-          await col.doc(aluno.id).set(payload, { merge: true });
+          await colAlunos.doc(aluno.id).set(payload, { merge: true });
         } else {
-          payload.createdAt = new Date().toISOString();
+          const alunoRef = colAlunos.doc();
+          payload.createdAt = nowIso;
           payload.createdBy = currentUser;
-          await col.add(payload);
+
+          const batch = db.batch();
+          batch.set(alunoRef, payload);
+
+          // mensalidade automática se tiver plano com valor > 0
+          const planoValor = Number(plano?.valor || 0);
+          if (planoIdSel && planoValor > 0) {
+            const lancRef = colLanc.doc();
+            batch.set(lancRef, {
+              data: toISODate(new Date()),
+              tipo: "RECEITA",
+              categoria: "Mensalidade",
+              descricao: `Mensalidade - ${nome}`,
+              valor: planoValor,
+              alunoId: alunoRef.id,
+              alunoNome: nome,
+              funcionarioId: "",
+              funcionarioNome: "",
+              prestadorId: "",
+              prestadorNome: "",
+              documentoDataUrl: "",
+              createdAt: nowIso,
+              createdBy: currentUser,
+              updatedAt: nowIso,
+              updatedBy: currentUser,
+              schemaVersion: "5.0"
+            });
+          }
+
+          await batch.commit();
         }
 
         closeModal();
@@ -1255,7 +1157,7 @@
     }
 
     /****************************************************************
-     * FUNCIONÁRIOS
+     * FUNCIONÁRIOS (gera despesa automática de Folha ao criar)
      ****************************************************************/
     $("funcSearch").addEventListener("input", () => { pag.func.page = 1; renderFuncionarios(); });
     $("funcPrev").addEventListener("click", () => { pag.func.page--; renderFuncionarios(); });
@@ -1281,6 +1183,8 @@
           <td class="py-2 pr-2 font-semibold">${safeStr(f.nome)}</td>
           <td class="py-2 pr-2 text-zinc-300">${safeStr(f.cargo || "")}</td>
           <td class="py-2 pr-2 text-zinc-300 mono">${money(f.salario || 0)}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(f.createdBy || "-")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${fmtDateTime(f.createdAt)}</td>
           <td class="py-2 pr-2">
             <div class="flex gap-2">
               <button class="${btnClass("dark")}" data-act="edit">Editar</button>
@@ -1299,8 +1203,6 @@
       const ref = db.collection("unidades").doc(currentUnit).collection("funcionarios").doc(f.id);
       await ref.delete();
     }
-
-    function refreshSelectsFuncionarios() {}
 
     function openFuncModal(func) {
       const isEdit = !!func;
@@ -1322,6 +1224,9 @@
             <div>
               <label class="text-sm text-zinc-300">Salário (R$)</label>
               <input id="mFuncSal" type="number" step="0.01" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${Number(func?.salario || 0)}" />
+              <div class="text-xs text-zinc-500 mt-1">
+                Ao CRIAR funcionário, o sistema gera automaticamente um lançamento de <b>DESPESA</b> (Folha) no dia de hoje.
+              </div>
             </div>
           </div>
 
@@ -1330,7 +1235,7 @@
 
             <div class="flex gap-3 items-start">
               <div class="w-[84px] h-[112px] rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center">
-                ${foto ? `<img id="mFuncFotoPreview" src="${foto}" class="w-full h-full object-cover" />` : `<div id="mFuncFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`}
+                ${foto ? `<img id="mFuncFotoPreview" src="${foto}" class="w-full h-full object-cover" />` : `<div id="mFuncFotoPreview" class="text-xs text-zinc-500">Sem imagem</div>`}
               </div>
 
               <div class="flex flex-col gap-2">
@@ -1355,28 +1260,16 @@
         bodyHtml: body
       });
 
-      let fotoDataUrl = func?.fotoDataUrl || "";
-
-      $("mFuncFotoTirar").addEventListener("click", () => $("mFuncFotoInputCam").click());
-      $("mFuncFotoAnexar").addEventListener("click", () => $("mFuncFotoInputFile").click());
-      $("mFuncFotoRemover").addEventListener("click", () => {
-        fotoDataUrl = "";
-        const box = $("mFuncFotoPreview");
-        box.outerHTML = `<div id="mFuncFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`;
+      const fotoPicker = setupImagePicker({
+        previewId: "mFuncFotoPreview",
+        btnCamId: "mFuncFotoTirar",
+        btnFileId: "mFuncFotoAnexar",
+        btnRemoveId: "mFuncFotoRemover",
+        inputCamId: "mFuncFotoInputCam",
+        inputFileId: "mFuncFotoInputFile",
+        initialValue: func?.fotoDataUrl || "",
+        outW: 300, outH: 400, maxKB: 450
       });
-
-      async function handleFile(input) {
-        const f = input.files?.[0];
-        if (!f) return;
-        fotoDataUrl = await cropResizeTo3x4(f, 300, 400, 0.85);
-        const prev = $("mFuncFotoPreview");
-        if (prev.tagName?.toLowerCase() === "img") prev.src = fotoDataUrl;
-        else prev.outerHTML = `<img id="mFuncFotoPreview" src="${fotoDataUrl}" class="w-full h-full object-cover" />`;
-        input.value = "";
-      }
-
-      $("mFuncFotoInputCam").addEventListener("change", (e) => handleFile(e.target));
-      $("mFuncFotoInputFile").addEventListener("change", (e) => handleFile(e.target));
 
       $("mFuncSalvar").addEventListener("click", async () => {
         const nome = safeStr($("mFuncNome").value).trim();
@@ -1385,21 +1278,54 @@
         const cargo = safeStr($("mFuncCargo").value).trim();
         const salario = Number($("mFuncSal").value || 0);
 
+        const base = db.collection("unidades").doc(currentUnit);
+        const colFunc = base.collection("funcionarios");
+        const colLanc = base.collection("lancamentos");
+
+        const nowIso = new Date().toISOString();
+
         const payload = {
           nome, cargo, salario,
-          fotoDataUrl: fotoDataUrl || "",
-          updatedAt: new Date().toISOString(),
+          fotoDataUrl: fotoPicker.get() || "",
+          updatedAt: nowIso,
           updatedBy: currentUser,
           schemaVersion: "5.0"
         };
 
-        const col = db.collection("unidades").doc(currentUnit).collection("funcionarios");
         if (isEdit) {
-          await col.doc(func.id).set(payload, { merge: true });
+          await colFunc.doc(func.id).set(payload, { merge: true });
         } else {
-          payload.createdAt = new Date().toISOString();
+          const funcRef = colFunc.doc();
+          payload.createdAt = nowIso;
           payload.createdBy = currentUser;
-          await col.add(payload);
+
+          const batch = db.batch();
+          batch.set(funcRef, payload);
+
+          if (salario > 0) {
+            const lancRef = colLanc.doc();
+            batch.set(lancRef, {
+              data: toISODate(new Date()),
+              tipo: "DESPESA",
+              categoria: "Folha",
+              descricao: `Folha - ${nome}`,
+              valor: salario,
+              alunoId: "",
+              alunoNome: "",
+              funcionarioId: funcRef.id,
+              funcionarioNome: nome,
+              prestadorId: "",
+              prestadorNome: "",
+              documentoDataUrl: "",
+              createdAt: nowIso,
+              createdBy: currentUser,
+              updatedAt: nowIso,
+              updatedBy: currentUser,
+              schemaVersion: "5.0"
+            });
+          }
+
+          await batch.commit();
         }
 
         closeModal();
@@ -1433,6 +1359,8 @@
           <td class="py-2 pr-2 font-semibold">${safeStr(p.nome)}</td>
           <td class="py-2 pr-2 text-zinc-300">${safeStr(p.tipo || "")}</td>
           <td class="py-2 pr-2 text-zinc-300">${safeStr(p.contato || "")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(p.createdBy || "-")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${fmtDateTime(p.createdAt)}</td>
           <td class="py-2 pr-2">
             <div class="flex gap-2">
               <button class="${btnClass("dark")}" data-act="edit">Editar</button>
@@ -1451,8 +1379,6 @@
       const ref = db.collection("unidades").doc(currentUnit).collection("prestadores").doc(p.id);
       await ref.delete();
     }
-
-    function refreshSelectsPrestadores() {}
 
     function openPrestModal(prest) {
       const isEdit = !!prest;
@@ -1485,7 +1411,7 @@
 
             <div class="flex gap-3 items-start">
               <div class="w-[84px] h-[112px] rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center">
-                ${foto ? `<img id="mPrestFotoPreview" src="${foto}" class="w-full h-full object-cover" />` : `<div id="mPrestFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`}
+                ${foto ? `<img id="mPrestFotoPreview" src="${foto}" class="w-full h-full object-cover" />` : `<div id="mPrestFotoPreview" class="text-xs text-zinc-500">Sem imagem</div>`}
               </div>
 
               <div class="flex flex-col gap-2">
@@ -1506,35 +1432,22 @@
 
       openModal({
         title: isEdit ? "Editar Prestador" : "Novo Prestador",
-        subtitle: "Foto 3x4 menor + dados básicos",
+        subtitle: "Fixo / Temporário + vínculo em lançamentos",
         bodyHtml: body
       });
 
-      const sel = $("mPrestTipo");
-      if (sel) sel.value = prest?.tipo || "Fixo";
+      $("mPrestTipo").value = prest?.tipo || "Fixo";
 
-      let fotoDataUrl = prest?.fotoDataUrl || "";
-
-      $("mPrestFotoTirar").addEventListener("click", () => $("mPrestFotoInputCam").click());
-      $("mPrestFotoAnexar").addEventListener("click", () => $("mPrestFotoInputFile").click());
-      $("mPrestFotoRemover").addEventListener("click", () => {
-        fotoDataUrl = "";
-        const box = $("mPrestFotoPreview");
-        box.outerHTML = `<div id="mPrestFotoPreview" class="text-xs text-zinc-500">Sem foto</div>`;
+      const fotoPicker = setupImagePicker({
+        previewId: "mPrestFotoPreview",
+        btnCamId: "mPrestFotoTirar",
+        btnFileId: "mPrestFotoAnexar",
+        btnRemoveId: "mPrestFotoRemover",
+        inputCamId: "mPrestFotoInputCam",
+        inputFileId: "mPrestFotoInputFile",
+        initialValue: prest?.fotoDataUrl || "",
+        outW: 300, outH: 400, maxKB: 450
       });
-
-      async function handleFile(input) {
-        const f = input.files?.[0];
-        if (!f) return;
-        fotoDataUrl = await cropResizeTo3x4(f, 300, 400, 0.85);
-        const prev = $("mPrestFotoPreview");
-        if (prev.tagName?.toLowerCase() === "img") prev.src = fotoDataUrl;
-        else prev.outerHTML = `<img id="mPrestFotoPreview" src="${fotoDataUrl}" class="w-full h-full object-cover" />`;
-        input.value = "";
-      }
-
-      $("mPrestFotoInputCam").addEventListener("change", (e) => handleFile(e.target));
-      $("mPrestFotoInputFile").addEventListener("change", (e) => handleFile(e.target));
 
       $("mPrestSalvar").addEventListener("click", async () => {
         const nome = safeStr($("mPrestNome").value).trim();
@@ -1543,10 +1456,11 @@
         const tipo = safeStr($("mPrestTipo").value);
         const contato = safeStr($("mPrestContato").value).trim();
 
+        const nowIso = new Date().toISOString();
         const payload = {
           nome, tipo, contato,
-          fotoDataUrl: fotoDataUrl || "",
-          updatedAt: new Date().toISOString(),
+          fotoDataUrl: fotoPicker.get() || "",
+          updatedAt: nowIso,
           updatedBy: currentUser,
           schemaVersion: "5.0"
         };
@@ -1555,11 +1469,10 @@
         if (isEdit) {
           await col.doc(prest.id).set(payload, { merge: true });
         } else {
-          payload.createdAt = new Date().toISOString();
+          payload.createdAt = nowIso;
           payload.createdBy = currentUser;
           await col.add(payload);
         }
-
         closeModal();
       });
     }
@@ -1580,6 +1493,8 @@
           <td class="py-2 pr-2 font-semibold">${safeStr(p.nome)}</td>
           <td class="py-2 pr-2 mono">${money(p.valor || 0)}</td>
           <td class="py-2 pr-2">${p.ativo ? "Sim" : "Não"}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(p.createdBy || "-")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${fmtDateTime(p.createdAt)}</td>
           <td class="py-2 pr-2">
             <div class="flex gap-2">
               <button class="${btnClass("dark")}" data-act="edit">Editar</button>
@@ -1645,9 +1560,10 @@
         const valor = Number($("mPlanoValor").value || 0);
         const ativo = $("mPlanoAtivo").value === "true";
 
+        const nowIso = new Date().toISOString();
         const payload = {
           nome, valor, ativo,
-          updatedAt: new Date().toISOString(),
+          updatedAt: nowIso,
           updatedBy: currentUser,
           schemaVersion: "5.0"
         };
@@ -1656,7 +1572,7 @@
         if (isEdit) {
           await col.doc(plano.id).set(payload, { merge: true });
         } else {
-          payload.createdAt = new Date().toISOString();
+          payload.createdAt = nowIso;
           payload.createdBy = currentUser;
           await col.add(payload);
         }
@@ -1665,7 +1581,7 @@
     }
 
     /****************************************************************
-     * LANÇAMENTOS (com Documento 3x4)
+     * LANÇAMENTOS (categoria com sugestão + audit trail visível)
      ****************************************************************/
     $("btnNovoLanc").addEventListener("click", () => openLancModal(null));
 
@@ -1679,7 +1595,7 @@
         const tt = new Date(l.data + "T00:00:00").getTime();
         return tt >= ini && tt <= fim;
       }
-      const t = new Date(l.data || l.createdAt || 0).getTime();
+      const t = new Date(l.createdAt || 0).getTime();
       return t >= ini && t <= fim;
     }
 
@@ -1700,6 +1616,12 @@
           ? `<img src="${l.documentoDataUrl}" class="w-[32px] h-[44px] object-cover rounded-lg border border-zinc-800" />`
           : `<div class="w-[32px] h-[44px] rounded-lg bg-zinc-900 border border-zinc-800"></div>`;
 
+        const vinc = [
+          l.alunoNome ? `Aluno: ${l.alunoNome}` : "",
+          l.funcionarioNome ? `Func: ${l.funcionarioNome}` : "",
+          l.prestadorNome ? `Prest: ${l.prestadorNome}` : ""
+        ].filter(Boolean).join(" • ");
+
         const tr = document.createElement("tr");
         tr.className = "border-b border-zinc-900";
         tr.innerHTML = `
@@ -1708,7 +1630,10 @@
           <td class="py-2 pr-2 text-zinc-300">${safeStr(l.categoria || "")}</td>
           <td class="py-2 pr-2 text-zinc-300">${safeStr(l.descricao || "")}</td>
           <td class="py-2 pr-2 mono ${tipo==="RECEITA" ? "text-green-300" : "text-red-300"}">${money(l.valor || 0)}</td>
+          <td class="py-2 pr-2 text-zinc-300">${vinc || "-"}</td>
           <td class="py-2 pr-2">${docThumb}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(l.createdBy || "-")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${fmtDateTime(l.createdAt)}</td>
           <td class="py-2 pr-2">
             <div class="flex gap-2">
               <button class="${btnClass("dark")}" data-act="edit">Editar</button>
@@ -1716,7 +1641,6 @@
             </div>
           </td>
         `;
-
         tr.querySelector('[data-act="edit"]').addEventListener("click", () => openLancModal(l));
         tr.querySelector('[data-act="del"]').addEventListener("click", () => deleteLanc(l));
         tbody.appendChild(tr);
@@ -1753,7 +1677,9 @@
 
             <div>
               <label class="text-sm text-zinc-300">Categoria</label>
-              <input id="mLancCat" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(lanc?.categoria || "")}" placeholder="ex.: Mensalidade, Folha, Aluguel..." />
+              <input id="mLancCat" list="mLancCatList" class="mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm" value="${safeStr(lanc?.categoria || "")}" placeholder="Digite ou escolha…" />
+              <datalist id="mLancCatList"></datalist>
+              <div class="text-xs text-zinc-500 mt-1">Sugestões mudam conforme Tipo, mas você pode digitar livre.</div>
             </div>
 
             <div>
@@ -1795,9 +1721,12 @@
             <div class="pt-2">
               <button id="mLancSalvar" class="${btnClass("primary")} w-full">${isEdit ? "Salvar alterações" : "Criar lançamento"}</button>
             </div>
+
+            <div class="text-xs text-zinc-500 pt-1">
+              Auditoria: criado/alterado fica gravado automaticamente (email + data/hora).
+            </div>
           </div>
 
-          <!-- DOCUMENTO 3x4 NO FUNDO -->
           <div class="space-y-3">
             <div class="text-sm text-zinc-300">Documento (3x4)</div>
 
@@ -1807,7 +1736,7 @@
                   ${
                     lanc?.documentoDataUrl
                       ? `<img id="mLancDocPreview" src="${lanc.documentoDataUrl}" class="w-full h-full object-cover" />`
-                      : `<div id="mLancDocPreview" class="text-xs text-zinc-500">Sem documento</div>`
+                      : `<div id="mLancDocPreview" class="text-xs text-zinc-500">Sem imagem</div>`
                   }
                 </div>
 
@@ -1821,8 +1750,7 @@
               </div>
 
               <div class="text-xs text-zinc-500 mt-3">
-                Guardado em base64 no Firestore (pronto para auditoria/IA no futuro).<br/>
-                Dica: depois você pode migrar para Firebase Storage sem quebrar o legado.
+                Guardado em base64 no Firestore (com limite de tamanho para não estourar o documento).
               </div>
             </div>
           </div>
@@ -1835,35 +1763,31 @@
         bodyHtml: body
       });
 
-      $("mLancTipo").value = safeStr(lanc?.tipo || "RECEITA");
-
-      // selects vínculos
-      if ($("mLancAluno")) $("mLancAluno").value = safeStr(lanc?.alunoId || "");
-      if ($("mLancFunc")) $("mLancFunc").value = safeStr(lanc?.funcionarioId || "");
-      if ($("mLancPrest")) $("mLancPrest").value = safeStr(lanc?.prestadorId || "");
-
-      let docDataUrl = lanc?.documentoDataUrl || "";
-
-      $("mLancDocTirar").addEventListener("click", () => $("mLancDocInputCam").click());
-      $("mLancDocAnexar").addEventListener("click", () => $("mLancDocInputFile").click());
-      $("mLancDocRemover").addEventListener("click", () => {
-        docDataUrl = "";
-        const prev = $("mLancDocPreview");
-        prev.outerHTML = `<div id="mLancDocPreview" class="text-xs text-zinc-500">Sem documento</div>`;
-      });
-
-      async function handleDocFile(input) {
-        const f = input.files?.[0];
-        if (!f) return;
-        docDataUrl = await cropResizeTo3x4(f, 450, 600, 0.85); // um pouco maior pra comprovante
-        const prev = $("mLancDocPreview");
-        if (prev.tagName?.toLowerCase() === "img") prev.src = docDataUrl;
-        else prev.outerHTML = `<img id="mLancDocPreview" src="${docDataUrl}" class="w-full h-full object-cover" />`;
-        input.value = "";
+      function fillCatList(tipo) {
+        const list = $("mLancCatList");
+        const arr = (tipo === "RECEITA") ? CATEG_RECEITA : CATEG_DESPESA;
+        list.innerHTML = arr.map(x => `<option value="${x}"></option>`).join("");
       }
 
-      $("mLancDocInputCam").addEventListener("change", (e) => handleDocFile(e.target));
-      $("mLancDocInputFile").addEventListener("change", (e) => handleDocFile(e.target));
+      $("mLancTipo").value = safeStr(lanc?.tipo || "RECEITA");
+      fillCatList($("mLancTipo").value);
+
+      $("mLancTipo").addEventListener("change", () => fillCatList($("mLancTipo").value));
+
+      $("mLancAluno").value = safeStr(lanc?.alunoId || "");
+      $("mLancFunc").value = safeStr(lanc?.funcionarioId || "");
+      $("mLancPrest").value = safeStr(lanc?.prestadorId || "");
+
+      const docPicker = setupImagePicker({
+        previewId: "mLancDocPreview",
+        btnCamId: "mLancDocTirar",
+        btnFileId: "mLancDocAnexar",
+        btnRemoveId: "mLancDocRemover",
+        inputCamId: "mLancDocInputCam",
+        inputFileId: "mLancDocInputFile",
+        initialValue: lanc?.documentoDataUrl || "",
+        outW: 450, outH: 600, maxKB: 900
+      });
 
       $("mLancSalvar").addEventListener("click", async () => {
         const data = $("mLancData").value;
@@ -1887,6 +1811,8 @@
         const func = state.funcionarios.find(f => f.id === funcionarioId);
         const prest = state.prestadores.find(p => p.id === prestadorId);
 
+        const nowIso = new Date().toISOString();
+
         const payload = {
           data,
           tipo,
@@ -1903,9 +1829,9 @@
           prestadorId: prestadorId || "",
           prestadorNome: prest ? safeStr(prest.nome) : "",
 
-          documentoDataUrl: docDataUrl || "",
+          documentoDataUrl: docPicker.get() || "",
 
-          updatedAt: new Date().toISOString(),
+          updatedAt: nowIso,
           updatedBy: currentUser,
           schemaVersion: "5.0"
         };
@@ -1914,7 +1840,7 @@
         if (isEdit) {
           await col.doc(lanc.id).set(payload, { merge: true });
         } else {
-          payload.createdAt = new Date().toISOString();
+          payload.createdAt = nowIso;
           payload.createdBy = currentUser;
           await col.add(payload);
         }
@@ -1939,6 +1865,8 @@
           <td class="py-2 pr-2">${safeStr(r.data || "")}</td>
           <td class="py-2 pr-2 font-semibold">${safeStr(r.nome || "")}</td>
           <td class="py-2 pr-2 mono text-zinc-200">${money(r.valor || 0)}</td>
+          <td class="py-2 pr-2 text-zinc-300">${safeStr(r.createdBy || "-")}</td>
+          <td class="py-2 pr-2 text-zinc-300">${fmtDateTime(r.createdAt)}</td>
           <td class="py-2 pr-2">
             <div class="flex gap-2">
               <button class="${btnClass("dark")}" data-act="edit">Editar</button>
@@ -2002,9 +1930,10 @@
         if (!nome) return alert("Informe o nome.");
         if (!valor || valor <= 0) return alert("Informe um valor válido (> 0).");
 
+        const nowIso = new Date().toISOString();
         const payload = {
           data, nome, valor,
-          updatedAt: new Date().toISOString(),
+          updatedAt: nowIso,
           updatedBy: currentUser,
           schemaVersion: "5.0"
         };
@@ -2013,7 +1942,7 @@
         if (isEdit) {
           await col.doc(ret.id).set(payload, { merge: true });
         } else {
-          payload.createdAt = new Date().toISOString();
+          payload.createdAt = nowIso;
           payload.createdBy = currentUser;
           await col.add(payload);
         }
@@ -2023,32 +1952,41 @@
     }
 
     /****************************************************************
-     * RELATÓRIOS (prévia + impressão simples)
+     * RELATÓRIOS (impressão sem <script> injetado)
      ****************************************************************/
     $("btnGerarRelatorio").addEventListener("click", () => {
-      const txt = buildReportText();
-      $("repPreview").textContent = txt;
+  const txt = buildReportText();
+  $("repPreview").textContent = txt;
 
-      // print
-      const w = window.open("", "_blank");
-      if (!w) return alert("Popup bloqueado. Permita popups para imprimir.");
-      const safe = (s) => (s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-      w.document.write(`
-        <html><head><title>Relatório - SGB</title>
-          <meta charset="UTF-8" />
-          <style>
-            body { font-family: Arial, sans-serif; padding: 18px; }
-            pre { white-space: pre-wrap; font-size: 12px; }
-          </style>
-        </head><body>
-          <h2>Relatório - ${safe(currentUnit)}</h2>
-          <pre>${safe(txt)}</pre>
-          <script>window.print();</script>
-        </body></html>
-      `);
-      w.document.close();
-    });
+  const w = window.open("", "_blank");
+  if (!w) return alert("Popup bloqueado. Permita popups para imprimir.");
 
+  const safe = (s) => (s || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  w.document.open();
+  w.document.write(`
+    <html>
+      <head>
+        <title>Relatório - SGB</title>
+        <meta charset="UTF-8" />
+        <style>
+          body { font-family: Arial, sans-serif; padding: 18px; }
+          pre { white-space: pre-wrap; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <h2>Relatório - ${safe(currentUnit)}</h2>
+        <pre>${safe(txt)}</pre>
+      </body>
+    </html>
+  `);
+  w.document.close();
+
+  // imprime sem usar <script> dentro do template
+  setTimeout(() => {
+    try { w.focus(); w.print(); } catch {}
+  }, 250);
+});
     function renderRelatoriosPreview() {
       $("repPreview").textContent = buildReportText();
     }
@@ -2066,22 +2004,22 @@
           const t = new Date(l.data + "T00:00:00").getTime();
           return t >= s && t <= e;
         }
-        const t = new Date(l.data || l.createdAt || 0).getTime();
+        const t = new Date(l.createdAt || 0).getTime();
         return t >= s && t <= e;
       });
 
       const rets = state.retiradas.filter(r => {
         const t = r.data && /^\d{4}-\d{2}-\d{2}$/.test(r.data)
           ? new Date(r.data + "T00:00:00").getTime()
-          : new Date(r.data || r.createdAt || 0).getTime();
+          : new Date(r.createdAt || 0).getTime();
         return t >= s && t <= e;
       });
 
       const receita = sumByTipo(lancs, "RECEITA");
       const despesa = sumByTipo(lancs, "DESPESA");
       const totalRet = rets.reduce((a,x)=>a+Number(x.valor||0),0);
-      const saldoOp = receita - despesa;     // operacional
-      const saldoCaixa = saldoOp - totalRet; // caixa após retiradas
+      const saldoOp = receita - despesa;
+      const saldoCaixa = saldoOp - totalRet;
 
       let out = "";
       out += `Unidade: ${currentUnit}\n`;
@@ -2098,12 +2036,12 @@
 
         out += `Lançamentos:\n`;
         lancs.slice().sort((a,b)=> safeStr(a.data).localeCompare(safeStr(b.data))).forEach(l => {
-          out += `- ${l.data || ""} | ${l.tipo || ""} | ${l.categoria || ""} | ${l.descricao || ""} | ${money(l.valor||0)}\n`;
+          out += `- ${l.data || ""} | ${l.tipo || ""} | ${l.categoria || ""} | ${l.descricao || ""} | ${money(l.valor||0)} | por ${l.createdBy||"-"}\n`;
         });
 
         out += `\nRetiradas:\n`;
         rets.slice().sort((a,b)=> safeStr(a.data).localeCompare(safeStr(b.data))).forEach(r => {
-          out += `- ${r.data || ""} | ${r.nome || ""} | ${money(r.valor||0)}\n`;
+          out += `- ${r.data || ""} | ${r.nome || ""} | ${money(r.valor||0)} | por ${r.createdBy||"-"}\n`;
         });
         out += `\n`;
       }
@@ -2112,7 +2050,7 @@
         out += `=== ALUNOS ===\n`;
         out += `Total: ${state.alunos.length}\n`;
         state.alunos.slice().sort((a,b)=> safeStr(a.nome).localeCompare(safeStr(b.nome))).forEach(a => {
-          out += `- ${a.nome || ""} | Plano: ${a.planoNome || ""} | Tel: ${a.telefone || ""}\n`;
+          out += `- ${a.nome || ""} | Plano: ${a.planoNome || ""} | Tel: ${a.telefone || ""} | por ${a.createdBy||"-"}\n`;
         });
         out += `\n`;
       }
@@ -2120,15 +2058,90 @@
       return out.trim();
     }
 
+    function escHtml(s) {
+      return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    function buildReportHtml() {
+      const tipo = $("repTipo").value;
+      const txt = buildReportText();
+
+      return `
+        <html><head>
+          <meta charset="UTF-8" />
+          <title>Relatório - SGB</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 18px; color: #111; }
+            h2 { margin: 0 0 8px; }
+            .muted { color: #555; font-size: 12px; margin: 0 0 14px; }
+            pre { white-space: pre-wrap; font-size: 12px; line-height: 1.35; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <h2>Relatório - ${escHtml(currentUnit)}</h2>
+          <div class="muted">Tipo: ${escHtml(tipo)} • Gerado em ${escHtml(new Date().toLocaleString("pt-BR"))}</div>
+          <pre>${escHtml(txt)}</pre>
+        </body></html>
+      `;
+    }
+
     /****************************************************************
-     * INIT
+     * BOOT
      ****************************************************************/
-    window.addEventListener("DOMContentLoaded", () => {
-      initFirebase();
-      // tab default
-      document.querySelector('.tab-btn[data-tab="overview"]')?.classList.add("active");
-      setActiveTab(localStorage.getItem("sgb_tab") || "overview");
-    });
+    function bindGlobalEvents() {
+      $("unitSelect").addEventListener("change", (e) => setUnit(e.target.value));
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => setActiveTab(btn.dataset.tab)));
+      $("overviewMonth").addEventListener("change", renderOverview);
+      $("lancMonth").addEventListener("change", renderLancamentos);
+    }
+
+    async function boot() {
+      try {
+        showGate("Validando acesso…");
+
+        currentUser = getUserEmailFromQuery();
+        if (!currentUser) {
+          showGate("Acesso bloqueado.", "Abra o sistema pelo /dashboard (login).");
+          return;
+        }
+        if (!allowedEmails.includes(currentUser)) {
+          showGate("Acesso negado.", "E-mail não autorizado.");
+          return;
+        }
+
+        initFirebase();
+        await ensureFirebaseSession();
+
+        // prepara UI e estado
+        bindGlobalEvents();
+
+        const now = new Date();
+        const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+        $("overviewMonth").value = month;
+        $("lancMonth").value = month;
+
+        $("repEnd").value = toISODate(now);
+        const start = new Date(now); start.setDate(1);
+        $("repStart").value = toISODate(start);
+
+        loadUnits();
+        setUnit(currentUnit);
+
+        const tab = localStorage.getItem("sgb_tab") || "overview";
+        showApp();
+        setActiveTab(tab);
+
+        started = true;
+
+        window.addEventListener("beforeunload", cleanupListeners);
+      } catch (e) {
+        console.error("[SGB] boot error:", e);
+        showGate("Falha ao iniciar.", String(e?.message || e));
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", boot);
   </script>
 </body>
 </html>

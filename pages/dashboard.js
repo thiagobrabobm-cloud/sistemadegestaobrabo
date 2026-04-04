@@ -100,6 +100,7 @@ export default function Dashboard() {
         <iframe
           src={iframeSrc}
           title="Sistema de Gestão Brabo"
+          allow="camera"
           style={{
             width: "100%",
             height: "100%",
