@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
     if (!allowed.has(email)) return res.status(403).json({ error: "forbidden" });
 
-    // ✅ aqui é a troca: authAdmin (e não admin.auth())
+    // uid pode ser o próprio e-mail (OK)
     const token = await authAdmin.createCustomToken(email, { email });
 
     return res.status(200).json({ token });
